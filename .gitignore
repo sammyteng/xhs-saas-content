@@ -1,0 +1,9 @@
+*.png
+*.jpg
+orig/
+xhs-output/
+__pycache__/
+*.pyc
+.DS_Store
+secrets.env
+.env
