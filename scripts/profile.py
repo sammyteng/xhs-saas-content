@@ -48,6 +48,7 @@ def main():
     s.add_argument("--provider"); s.add_argument("--model"); s.add_argument("--aspect")
     s.add_argument("--author"); s.add_argument("--ip")
     s.add_argument("--rotate"); s.add_argument("--style-pool")
+    s.add_argument("--clash-dims"); s.add_argument("--window")
     a = ap.parse_args()
 
     if a.cmd == "path":
@@ -70,6 +71,10 @@ def main():
             d["rotate"] = str(a.rotate).lower() in ("1", "true", "yes", "on")
         if a.style_pool is not None:
             d["style_pool"] = [x.strip() for x in a.style_pool.split(",") if x.strip()]
+        if a.clash_dims is not None:
+            d["clash_dims"] = int(a.clash_dims)
+        if a.window is not None:
+            d["window"] = int(a.window)
         for k, v in {"provider": a.provider, "model": a.model, "aspect": a.aspect}.items():
             if v is not None: gen[k] = v
         if gen: d["gen"] = gen

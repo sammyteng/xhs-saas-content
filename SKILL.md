@@ -43,7 +43,7 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
     - `dashscope`（通义万相）：`DASHSCOPE_API_KEY`
 - 默认值：文章风格按内容类型推荐并让用户 N 选 1；**标题产出 3 个候选（各≤20 字符）**；**配图按内容定 1-9 张**（不固定）；输出目录默认 `./xhs-output`。
 - **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」。
-- **防同质化**：profile 只锁**品牌层**(作者/IP/语气)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。
+- **防同质化**：profile 只锁**品牌层**(作者/IP/语气)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。撞车松紧可调：`--clash-dims N`(默认3)、`--window N`(默认6)，也可 `diversity.py check --clash-dims/--window` 临时覆盖、`diversity.py config` 看当前生效值。
 
 ## 4. 工作流（含自循环）
 

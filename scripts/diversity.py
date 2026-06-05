@@ -48,21 +48,37 @@ def save_hist(h):
     json.dump(h, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     return p
 
-def profile_style_pool():
+def load_profile():
     pp = os.environ.get("XHS_PROFILE")
     if not pp:
         base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
         pp = os.path.join(base, "xhs-saas-content", "profile.json")
     if os.path.exists(pp):
         try:
-            d = json.load(open(pp, encoding="utf-8"))
-            sp = d.get("style_pool")
-            if isinstance(sp, str):
-                sp = [x.strip() for x in sp.split(",") if x.strip()]
-            return sp or None
+            return json.load(open(pp, encoding="utf-8"))
         except Exception:
-            return None
-    return None
+            return {}
+    return {}
+
+def profile_style_pool():
+    sp = load_profile().get("style_pool")
+    if isinstance(sp, str):
+        sp = [x.strip() for x in sp.split(",") if x.strip()]
+    return sp or None
+
+def cfg_int(cli, env, key, default):
+    """优先级：命令行参数 > 环境变量 > profile > 默认值"""
+    if cli is not None:
+        return int(cli)
+    e = os.environ.get(env)
+    if e:
+        try: return int(e)
+        except ValueError: pass
+    pv = load_profile().get(key)
+    if pv is not None:
+        try: return int(pv)
+        except (ValueError, TypeError): pass
+    return default
 
 def recent_values(hist, dim):
     vals = []
@@ -90,11 +106,11 @@ def pick(hist):
         combo[dim] = random.choice(cands)
     return combo
 
-def check(hist, combo):
+def check(hist, combo, clash_dims=CLASH_DIMS, window=WINDOW):
     clashes = []
-    for e in hist[-WINDOW:]:
+    for e in hist[-window:]:
         same = [d for d in DIMS if e.get(d) and e.get(d) == combo.get(d)]
-        if len(same) >= CLASH_DIMS:
+        if len(same) >= clash_dims:
             clashes.append({"title": e.get("title", ""), "date": e.get("date", ""), "same": same})
     return {"ok": len(clashes) == 0, "clashes": clashes}
 
@@ -104,6 +120,8 @@ def main():
     sub.add_parser("pick"); sub.add_parser("path")
     sp = sub.add_parser("show"); sp.add_argument("--n", type=int, default=8)
     ck = sub.add_parser("check"); ck.add_argument("--combo", required=True)
+    ck.add_argument("--clash-dims"); ck.add_argument("--window")
+    sub.add_parser("config")
     rc = sub.add_parser("record"); rc.add_argument("--combo", required=True); rc.add_argument("--title", default="")
     a = ap.parse_args()
     hist = load_hist()
@@ -118,8 +136,13 @@ def main():
         for e in hist[-a.n:]:
             print(json.dumps(e, ensure_ascii=False))
         return
+    if a.cmd == "config":
+        print(json.dumps({"clash_dims": cfg_int(None, "XHS_CLASH_DIMS", "clash_dims", CLASH_DIMS),
+                          "window": cfg_int(None, "XHS_WINDOW", "window", WINDOW)}, ensure_ascii=False)); return
     if a.cmd == "check":
-        print(json.dumps(check(hist, json.loads(a.combo)), ensure_ascii=False)); return
+        cd = cfg_int(a.clash_dims, "XHS_CLASH_DIMS", "clash_dims", CLASH_DIMS)
+        wn = cfg_int(a.window, "XHS_WINDOW", "window", WINDOW)
+        print(json.dumps(check(hist, json.loads(a.combo), cd, wn), ensure_ascii=False)); return
     if a.cmd == "record":
         combo = json.loads(a.combo)
         combo["title"] = a.title
