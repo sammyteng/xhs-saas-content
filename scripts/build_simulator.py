@@ -118,6 +118,7 @@ HTML = r"""<!DOCTYPE html>
   .ntext.edit:hover,.ntext.edit:focus{background:#fafafa;border-radius:6px;}
   .ntext .b{font-weight:600;color:#111;}
   .tags{margin-top:14px;color:#1a4b8c;font-size:14.5px;line-height:1.95;}
+  .tags.edit:hover,.tags.edit:focus{background:#f5f8ff;border-radius:6px;outline:none;}
   .meta{margin-top:14px;color:#b5b5b5;font-size:12.5px;}
   .botbar{min-height:60px;border-top:1px solid #f3f3f3;display:flex;align-items:center;gap:12px;padding:10px 22px;flex-shrink:0;flex-wrap:wrap;}
   .ipt{flex:1;background:#f5f5f5;border-radius:20px;color:#9a9a9a;font-size:13px;padding:9px 18px;min-width:120px;}
@@ -191,7 +192,7 @@ function bust(n){ return SRC[n] ? srcOf(n) : srcOf(n)+'?t='+Date.now(); }
 function renderHead(){
   $('modehint').innerHTML = SHARE
     ? '只读分享版 · 图片已内嵌单文件 · 左屏翻图（← →）· 右屏看完整内容'
-    : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文直接改 · 改完点「确认内容」保存';
+    : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文/标签直接改 · 改完点「确认内容」保存';
   $('av').textContent = DATA.avatar || 'AI';
   $('nm').textContent = DATA.author || '';
   $('sub').textContent = 'IP属地：' + (DATA.ip || '');
@@ -280,12 +281,16 @@ function upload(file){
 }
 
 /* ---- 确认内容 → 保存 JSON + 生成分享版 ---- */
+function parseTags(){
+  return (($('tags').innerText)||'').split(/[#\s,，、]+/).map(s=>s.trim()).filter(Boolean);
+}
 function collect(){
   return Object.assign({}, DATA, {
     titles: DATA.titles,
     title: $('titlebar').textContent.trim(),   // 最终选定/编辑后的标题
     titleIndex: titleIdx,
-    body: $('ntext').innerText
+    body: $('ntext').innerText,
+    tags: parseTags()                          // 编辑后的标签
   });
 }
 async function confirmContent(){
@@ -318,6 +323,7 @@ function init(){
     $('titlebar').classList.add('edit'); $('titlebar').contentEditable=true;
     $('titlebar').addEventListener('input',updateCnt);
     $('ntext').classList.add('edit'); $('ntext').contentEditable=true;
+    $('tags').classList.add('edit'); $('tags').contentEditable=true;
     if(!SERVED){ $('btnregen').title='需 serve.py 后端'; }
   }
   document.addEventListener('keydown',e=>{
