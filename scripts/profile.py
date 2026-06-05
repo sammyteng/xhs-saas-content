@@ -47,6 +47,7 @@ def main():
     s.add_argument("--article-style"); s.add_argument("--image-style")
     s.add_argument("--provider"); s.add_argument("--model"); s.add_argument("--aspect")
     s.add_argument("--author"); s.add_argument("--ip")
+    s.add_argument("--rotate"); s.add_argument("--style-pool")
     a = ap.parse_args()
 
     if a.cmd == "path":
@@ -65,6 +66,10 @@ def main():
         for k, v in {"article_style": a.article_style, "image_style": a.image_style,
                      "author": a.author, "ip": a.ip}.items():
             if v is not None: d[k] = v
+        if a.rotate is not None:
+            d["rotate"] = str(a.rotate).lower() in ("1", "true", "yes", "on")
+        if a.style_pool is not None:
+            d["style_pool"] = [x.strip() for x in a.style_pool.split(",") if x.strip()]
         for k, v in {"provider": a.provider, "model": a.model, "aspect": a.aspect}.items():
             if v is not None: gen[k] = v
         if gen: d["gen"] = gen

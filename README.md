@@ -69,6 +69,21 @@ python3 scripts/profile.py reset       # 想重新选风格时清空
 - 默认存 `~/.config/xhs-saas-content/profile.json`；设 `XHS_PROFILE=别的路径` 可给不同设备/账号各存一份。
 - 跑 skill 时它会先 `profile.py show`：有就直接用、跳过选择；没有或你说「调整风格」才重新选。
 
+## 跨多篇防同质化
+
+多篇内容容易"一个模子"。解法：profile 只锁**品牌层**(作者/IP/语气)，**创意层**每篇轮换并查重。
+
+```bash
+python3 scripts/diversity.py pick                       # 给本篇分配一组"不撞最近"的维度
+python3 scripts/diversity.py check --combo '{...}'      # 与最近 6 篇查重（≥3 维相同=撞）
+python3 scripts/diversity.py record --combo '{...}' --title "标题"   # 生成后记账
+python3 scripts/diversity.py show                       # 看最近几篇的维度
+```
+
+- 轮换维度：选题角度 / 文章风格 / 结构 / 开头钩子 / 配图风格 / 标题套路（见 `styles/angle-matrix.md`）。
+- 历史账本默认 `~/.config/xhs-saas-content/history.json`，按账号各存一份（`XHS_HISTORY` 可改）。
+- 想固定某风格：`profile.py set --rotate false`；想限定风格池：`--style-pool A,B,F`。
+
 ## 目录结构
 
 ```
@@ -78,13 +93,15 @@ xhs-saas-content/
 ├── styles/
 │   ├── article-styles.json   # 8 种文章风格 + 内容类型推荐
 │   ├── image-styles.md       # 3 种图片风格 + 提示词模板 + 「避免 AI 味」负面清单
-│   └── writing-deai.md       # 去 AI 味清单
+│   ├── writing-deai.md       # 去 AI 味清单
+│   └── angle-matrix.md       # 选题角度矩阵 + 轮换池（防同质化）
 ├── scripts/
 │   ├── gen_image.py          # 多模型文生图（gemini/openai/ark·即梦/dashscope）
 │   ├── shot.py               # HTML → PNG
 │   ├── build_simulator.py    # 模拟器生成器（--embed 出内嵌分享版）
 │   ├── serve.py              # 编辑版本地后端（重生成/换图/确认保存）
 │   ├── profile.py            # 风格/生图偏好记忆（二次运行自动复用）
+│   ├── diversity.py          # 反同质化引擎（多篇轮换不撞）
 │   └── watermark.py          # （可选，默认不用）打水印工具
 └── examples/
     └── content.sample.json   # 示例（虚构产品）
