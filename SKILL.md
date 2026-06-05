@@ -26,6 +26,7 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
 - [ ] `小红书模拟器.html`（编辑版）能打开：图片轮播正常、3 标题可点选、正文/标题可编辑、单图提示词框在。
 - [ ] `小红书模拟器_分享版.html` 是单文件、图片已内嵌（`grep data:image` 命中），断网也能看图。
 - [ ] 产出目录自包含；**不打「AI生成」水印**。
+- [ ] 偏好已落盘：首次运行写了 profile，二次运行 `profile.py show` 能读到并复用，未重复问风格。
 
 未全部勾掉前，不得向用户报「完成」。
 
@@ -40,12 +41,18 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
     - `ark`（豆包·即梦/Seedream）：`ARK_API_KEY`
     - `dashscope`（通义万相）：`DASHSCOPE_API_KEY`
 - 默认值：文章风格按内容类型推荐并让用户 N 选 1；**标题产出 3 个候选（各≤20 字符）**；**配图按内容定 1-9 张**（不固定）；输出目录默认 `./xhs-output`。
+- **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」。
 
 ## 4. 工作流（含自循环）
 
 ```
 STEP 0  复述：把「目标定义」和「验收清单」打印到 stdout，确认听懂了再动手。
-STEP 0b 读 styles/article-styles.json，按内容类型推荐 2-3 个风格 → 用户 N 选 1。
+STEP 0a 读偏好：python3 scripts/profile.py show
+          - 已存且用户没要求调整 → 复用其 文章风格/图片风格/生图参数(provider/model/aspect)，
+            直接跳到 STEP 1，不再问风格（省选择时间）。
+          - 首次(无 profile) 或 用户说「调整风格/换风格/重选风格」→ 进 STEP 0b 选，
+            选完 `python3 scripts/profile.py set --article-style X --image-style N --provider ... ` 覆盖保存。
+STEP 0b 读 styles/article-styles.json + image-styles.md，推荐 2-3 个文章风格 + 图片风格 → 用户选定。
 STEP 1  写初稿：**3 个候选标题（各≤20 字符）** + 长文 + 标签，套用所选风格的人设与结构。
 STEP 2  按 styles/writing-deai.md 改写去 AI 味。
 STEP 3  读 styles/image-styles.md，**先读头部「避免一眼 AI」负面清单**，按内容定 1-9 张配图，
@@ -70,7 +77,7 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 
 ## 5. 副作用与权限
 
-- **写入**：只写用户指定的输出目录（默认 `./xhs-output`），不碰其他路径。
+- **写入**：只写用户指定的输出目录（默认 `./xhs-output`）；偏好文件写到 `~/.config/xhs-saas-content/profile.json`（可用 `XHS_PROFILE` 改路径）。其余路径不碰。
 - **网络/API**：风格1/2 调用所选生图模型（Gemini / OpenAI / 豆包·即梦 / 通义万相）。所有 key **从环境变量读取，绝不写死在文件里**。
 - **依赖**：`pip install pillow playwright` + `playwright install chromium`（风格3）；生图按所选 provider 装其一：`google-genai` / `openai` / `volcengine-python-sdk[ark]` / `dashscope`。
 - **本地服务**：`scripts/serve.py` 起本地 http 服务（默认 127.0.0.1:8000），仅供编辑版模拟器调用单图重生成/换图；「确认内容」写 `content.confirmed.json` 并自动生成分享版 html。
@@ -99,5 +106,6 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 - `scripts/shot.py` — HTML → 高清 PNG（playwright）
 - `scripts/build_simulator.py` — content.json → 模拟器 HTML（默认编辑版；加 `--embed` 出图片内嵌的分享版）
 - `scripts/serve.py` — 编辑版本地后端（单图重生成/换图/确认保存+自动生成分享版）
+- `scripts/profile.py` — 风格/生图偏好记忆（show/set/reset），二次运行自动复用
 - `scripts/watermark.py` — （可选，默认不用）批量打水印工具
 - `examples/content.sample.json` — 示例（含 3 候选标题 + image_prompts，虚构产品，可直接套改）

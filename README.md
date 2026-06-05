@@ -55,6 +55,20 @@ python3 scripts/serve.py xhs-output          # 然后浏览器打开 http://127.
 - **分享版** `小红书模拟器_分享版.html`：单文件、图片内嵌，直接发给别人。
 - 点「✓ 确认内容」后，后端写 `content.confirmed.json` 并自动生成分享版（进入发布流程，发布动作暂未实现）。
 
+## 风格偏好记忆（少选一次）
+
+首次选定的文案风格 / 图片风格 / 生图参数会被记住，之后自动复用，不用每次重选：
+
+```bash
+python3 scripts/profile.py show        # 看当前偏好（首次为空）
+python3 scripts/profile.py set --article-style A --image-style 1 \
+    --provider gemini --model pro --aspect 9:16 --author "AI内容观察" --ip 上海
+python3 scripts/profile.py reset       # 想重新选风格时清空
+```
+
+- 默认存 `~/.config/xhs-saas-content/profile.json`；设 `XHS_PROFILE=别的路径` 可给不同设备/账号各存一份。
+- 跑 skill 时它会先 `profile.py show`：有就直接用、跳过选择；没有或你说「调整风格」才重新选。
+
 ## 目录结构
 
 ```
@@ -70,6 +84,7 @@ xhs-saas-content/
 │   ├── shot.py               # HTML → PNG
 │   ├── build_simulator.py    # 模拟器生成器（--embed 出内嵌分享版）
 │   ├── serve.py              # 编辑版本地后端（重生成/换图/确认保存）
+│   ├── profile.py            # 风格/生图偏好记忆（二次运行自动复用）
 │   └── watermark.py          # （可选，默认不用）打水印工具
 └── examples/
     └── content.sample.json   # 示例（虚构产品）
