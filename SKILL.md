@@ -37,7 +37,9 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
 - **产品信息**：产品名 + 一句话定位 + 3-6 个卖点/数据（必填）。
 - **内容类型**：行业观点 / 教程 / 选型 / 经验 / 种草 / 测评 / 速报（用于推荐风格）。
 - `cover-design-token`（可选，String）：封面 skill 导出的 `design-token.json` 路径。提供时内容图自动适配封面的色彩与氛围风格，确保全套图视觉统一。
-- **生图 API key**（任选一家，按 provider）——若要用 LLM 生图（风格1/2）。没有任何 key 时，可只用风格3（HTML 渲染）出图。
+- **生图能力**（二选一，自动判断）：
+    - **Agent 自带生图**（推荐）：如在 Codex、Antigravity、Claude 等具备图片生成能力的 Agent 环境中运行，Agent 直接按提示词生图，**无需配置任何 API Key**，风格 1/2/3 均可使用。
+    - **独立使用 / 手动配置 API**：若使用者自己运行脚本，可配置以下任一 API key（风格 1/2 需要）；没有 key 时可只用风格 3（HTML 渲染）出图。
     - `gemini`：`GEMINI_API_KEY` / `GOOGLE_AI_API_KEY`
     - `openai`：`OPENAI_API_KEY`（支持 `--base-url` 接兼容聚合站）
     - `ark`（豆包·即梦/Seedream）：`ARK_API_KEY`
@@ -89,7 +91,7 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 ## 5. 副作用与权限
 
 - **写入**：只写用户指定的输出目录（默认 `./xhs-output`）；偏好 `~/.config/xhs-saas-content/profile.json` 与历史账本 `~/.config/xhs-saas-content/history.json`（可用 `XHS_PROFILE`/`XHS_HISTORY` 改路径）。其余路径不碰。
-- **网络/API**：风格1/2 调用所选生图模型（Gemini / OpenAI / 豆包·即梦 / 通义万相）。所有 key **从环境变量读取，绝不写死在文件里**。
+- **网络/API**：Agent 自带生图时无需外部 API；独立使用时风格 1/2 调用所选生图模型（Gemini / OpenAI / 豆包·即梦 / 通义万相）。所有 key **从环境变量读取，绝不写死在文件里**。
 - **依赖**：`pip install pillow playwright` + `playwright install chromium`（风格3）；生图按所选 provider 装其一：`google-genai` / `openai` / `volcengine-python-sdk[ark]` / `dashscope`。
 - **本地服务**：`scripts/serve.py` 起本地 http 服务（默认 127.0.0.1:8000），仅供编辑版模拟器调用单图重生成/换图；「确认内容」写 `content.confirmed.json` 并自动生成分享版 html。
 - **破坏性**：不就地覆盖原图（重生成/换图都写新文件名）；不删除任何用户文件。
@@ -100,7 +102,7 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 任一步骤失败时：
 1. **明确报错**：打印失败的 STEP、命令、原始错误信息。
 2. **给备选方案**：
-   - 没有 API key / 生图失败 → 换一家 provider，或退回风格3（HTML 渲染）出图。
+   - 没有 API key 且 Agent 无生图能力 / 生图失败 → 换一家 provider，或退回风格3（HTML 渲染）出图。
    - playwright 没装 → 提示安装命令，或改用 LLM 生图。
    - 中文出错字 → 优先 `--provider gemini --model pro`，或退回风格3（HTML，零错字）。
    - 模型命中安全过滤 → 调整提示词重试（最多重试 1 次）。
