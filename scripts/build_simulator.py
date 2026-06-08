@@ -23,6 +23,24 @@ content.json 字段（均可选，缺省有默认值）：
 """
 import os, json, argparse, base64, mimetypes
 
+# ---- cover-bridge.json 路径（相对于本脚本） ----
+BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "styles", "cover-bridge.json")
+
+def load_design_token(token_path):
+    """读取 design-token.json，返回 designToken 字典（或 None）。"""
+    if not token_path or not os.path.exists(token_path):
+        return None
+    with open(token_path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("designToken", data)
+
+def load_bridge():
+    """加载 cover-bridge.json 映射表。"""
+    if not os.path.exists(BRIDGE_PATH):
+        return None
+    with open(BRIDGE_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
 def norm(content):
     c = dict(content)
     if not c.get("titles"):
@@ -342,6 +360,8 @@ def main():
     ap.add_argument("--content", required=True)
     ap.add_argument("--out", default="小红书模拟器.html")
     ap.add_argument("--embed", action="store_true", help="把图片 base64 内嵌成单文件（分享版）")
+    ap.add_argument("--design-token", default=None,
+                    help="封面 skill 导出的 design-token.json 路径（可选），提供时模拟器自动适配封面配色")
     args = ap.parse_args()
 
     with open(args.content, encoding="utf-8") as f:
@@ -350,10 +370,51 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(args.content))
     src = embed_map(content["images"], base_dir) if args.embed else {}
 
+    # ---- 若提供了 design token，注入主题色和封面风格信息 ----
+    token = load_design_token(args.design_token)
+    token_style_css = ""
+    token_info_html = ""
+    if token:
+        primary = token.get("primaryColor", "#ff2442")
+        accent = token.get("accentColor", primary)
+        bg_tone = token.get("bgTone", "")
+        font_vibe = token.get("fontVibe", "")
+        # 覆盖模拟器头部渐变色和强调色
+        token_style_css = f"""<style>
+  body{{background:radial-gradient(1200px 800px at 30% 0%,{primary}22,#15131a 60%,#0c0b10);}}
+  .head h1 .red{{color:{primary};}}
+  .fl{{background:{primary};}}
+  .thumb.on{{border-color:{primary};}}
+  .chip.on{{background:{primary}15;border-color:{primary};color:{primary};}}
+  .btn.p{{background:{primary};}}
+</style>"""
+        # 封面风格信息展示
+        parts = []
+        if bg_tone:
+            parts.append(f"底色 {bg_tone}")
+        if primary:
+            parts.append(f"主色 {primary}")
+        if font_vibe:
+            parts.append(f"字体 {font_vibe}")
+        if parts:
+            token_info_html = ' · '.join(parts)
+
     html = (HTML
             .replace("__DATA__", json.dumps(content, ensure_ascii=False))
             .replace("__SRC__", json.dumps(src, ensure_ascii=False))
             .replace("__SHARE__", "true" if args.embed else "false"))
+
+    # 注入 design token 样式（在 </head> 前）和封面信息（在 modehint 后）
+    if token_style_css:
+        html = html.replace("</head>", f"{token_style_css}\n</head>")
+    if token_info_html:
+        # 在 modehint <p> 后追加封面风格标识
+        html = html.replace(
+            '<p id="modehint"></p>',
+            f'<p id="modehint"></p>\n    <p style="color:#7a7388;font-size:12px;margin-top:4px;">🎨 封面风格：{token_info_html}</p>'
+        )
+        import sys
+        print(f"[design-token] 模拟器已适配封面风格：{token_info_html}", file=sys.stderr)
 
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(html)

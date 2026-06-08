@@ -36,6 +36,7 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
 用户需提供：
 - **产品信息**：产品名 + 一句话定位 + 3-6 个卖点/数据（必填）。
 - **内容类型**：行业观点 / 教程 / 选型 / 经验 / 种草 / 测评 / 速报（用于推荐风格）。
+- `cover-design-token`（可选，String）：封面 skill 导出的 `design-token.json` 路径。提供时内容图自动适配封面的色彩与氛围风格，确保全套图视觉统一。
 - **生图 API key**（任选一家，按 provider）——若要用 LLM 生图（风格1/2）。没有任何 key 时，可只用风格3（HTML 渲染）出图。
     - `gemini`：`GEMINI_API_KEY` / `GOOGLE_AI_API_KEY`
     - `openai`：`OPENAI_API_KEY`（支持 `--base-url` 接兼容聚合站）
@@ -44,6 +45,7 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
 - 默认值：文章风格按内容类型推荐并让用户 N 选 1；**标题产出 3 个候选（各≤20 字符）**；**配图按内容定 1-9 张**（不固定）；输出目录默认 `./xhs-output`。
 - **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」。
 - **防同质化**：profile 只锁**品牌层**(作者/IP/语气)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。撞车松紧可调：`--clash-dims N`(默认3)、`--window N`(默认6)，也可 `diversity.py check --clash-dims/--window` 临时覆盖、`diversity.py config` 看当前生效值。
+- **封面联动**（可选）：`cover-design-token`（String）— 封面 skill（`xhs-cover-skill`）导出的 `design-token.json` 路径。提供时内容图自动适配封面的色彩与氛围风格，确保全套图（封面+内页）视觉统一。不提供则一切照旧。
 
 ## 4. 工作流（含自循环）
 
@@ -54,6 +56,9 @@ STEP 0a 读偏好：python3 scripts/profile.py show
             直接跳到 STEP 1，不再问风格（省选择时间）。
           - 首次(无 profile) 或 用户说「调整风格/换风格/重选风格」→ 进 STEP 0b 选，
             选完 `python3 scripts/profile.py set --article-style X --image-style N --provider ... ` 覆盖保存。
+STEP 0a' 读封面 Token：若用户提供了 --cover-design-token 路径，读取 design-token.json，
+            通过 styles/cover-bridge.json 映射出内容图的配色/氛围参数，
+            后续 STEP 3/4 的提示词和 HTML 模板自动注入这些参数。
 STEP 0b 读 styles/article-styles.json + image-styles.md，推荐 2-3 个文章风格 + 图片风格 → 用户选定。
 STEP 0c 防同质化：python3 scripts/diversity.py pick → 拿到本篇〔角度/风格/结构/钩子/配图风格/标题套路〕组合；
           python3 scripts/diversity.py check --combo '{...}' 复核与最近 6 篇无 ≥3 维撞车，撞了重 pick。
@@ -109,6 +114,7 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 - `styles/image-styles.md` — 3 种图片风格 + 提示词模板 + 配图清单
 - `styles/writing-deai.md` — 去 AI 味改写清单与自检
 - `styles/angle-matrix.md` — 选题角度矩阵 + 钩子/结构/标题轮换池（防同质化）
+- `styles/cover-bridge.json` — 封面 designToken → 内容图视觉适配映射表（bgTone/fontVibe 映射）
 - `scripts/gen_image.py` — 多模型文生图（gemini/openai/ark·即梦/dashscope）
 - `scripts/shot.py` — HTML → 高清 PNG（playwright）
 - `scripts/build_simulator.py` — content.json → 模拟器 HTML（默认编辑版；加 `--embed` 出图片内嵌的分享版）

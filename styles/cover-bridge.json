@@ -1,0 +1,63 @@
+{
+  "_note": "封面风格 → 内容图视觉适配。根据封面 designToken 的 bgTone 映射内容图的配色方案，确保封面+内页视觉统一。",
+  "bgTone_mappings": {
+    "dark": {
+      "description": "深色封面 → 内容图保持暗调或使用高对比浅底",
+      "image_style_preference": [1, 3],
+      "html_card": {
+        "background": "#1d1d1f",
+        "text_color": "#f5f3ee",
+        "accent_from": "primaryColor",
+        "label_color_from": "primaryColor"
+      },
+      "prompt_color_hint": "dark moody background, dramatic lighting, high contrast with {primaryColor} accent highlights",
+      "prompt_style_hint": "professional, premium, editorial darkness"
+    },
+    "light": {
+      "description": "浅色封面 → 内容图保持明亮干净",
+      "image_style_preference": [3, 2],
+      "html_card": {
+        "background": "#f5f3ee",
+        "text_color": "#1d1d1f",
+        "accent_from": "primaryColor",
+        "label_color_from": "accentColor"
+      },
+      "prompt_color_hint": "clean bright background, soft natural light, {primaryColor} accent details",
+      "prompt_style_hint": "minimal, airy, magazine-clean"
+    },
+    "warm": {
+      "description": "暖色封面 → 内容图保持温暖氛围",
+      "image_style_preference": [1, 3],
+      "html_card": {
+        "background": "#faf6ef",
+        "text_color": "#2d2d2d",
+        "accent_from": "primaryColor",
+        "label_color_from": "primaryColor"
+      },
+      "prompt_color_hint": "warm cozy atmosphere, golden hour lighting, natural wood and earth tones, {primaryColor} warm accents",
+      "prompt_style_hint": "lived-in, homey, warm editorial"
+    }
+  },
+  "fontVibe_mappings": {
+    "bold-sans": {
+      "html_font_family": "'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif",
+      "html_title_weight": 800,
+      "html_title_size": "84px"
+    },
+    "handwritten": {
+      "html_font_family": "'ZCOOL XiaoWei', 'PingFang SC', serif",
+      "html_title_weight": 400,
+      "html_title_size": "72px"
+    },
+    "editorial": {
+      "html_font_family": "'Noto Serif SC', 'Source Han Serif SC', 'PingFang SC', serif",
+      "html_title_weight": 700,
+      "html_title_size": "78px"
+    },
+    "playful": {
+      "html_font_family": "'ZCOOL KuaiLe', 'PingFang SC', sans-serif",
+      "html_title_weight": 700,
+      "html_title_size": "80px"
+    }
+  }
+}

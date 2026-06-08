@@ -33,7 +33,7 @@
 
 各 provider 的模型别名见下方 MODELS。
 """
-import os, sys, argparse, base64, urllib.request
+import os, sys, argparse, base64, urllib.request, json
 
 # ---- 模型别名（截至 2026-06，API 可用的最新版）----
 GEMINI_MODELS = {
@@ -44,6 +44,54 @@ GEMINI_MODELS = {
 OPENAI_DEFAULT = "gpt-image-1.5"         # 当前默认；可换 gpt-image-2 / gpt-image-1-mini
 ARK_DEFAULT = "doubao-seedream-4-0-250828"   # Seedream 4.0（支持 4K、多图参考）
 DASHSCOPE_DEFAULT = "wan2.2-t2i-plus"    # 通义万相 2.2（ImageSynthesis 同步/异步均支持）
+
+# ---- cover-bridge.json 路径（相对于本脚本） ----
+BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "styles", "cover-bridge.json")
+
+# ---- 设计 Token → 提示词注入 ----
+def load_design_token(token_path):
+    """读取 design-token.json，返回 designToken 字典（或 None）。"""
+    if not token_path or not os.path.exists(token_path):
+        return None
+    with open(token_path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("designToken", data)  # 兼容顶层即 designToken 的情况
+
+def load_bridge():
+    """加载 cover-bridge.json 映射表。"""
+    if not os.path.exists(BRIDGE_PATH):
+        return None
+    with open(BRIDGE_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+def apply_design_token_to_prompt(prompt, token, bridge):
+    """根据 designToken + bridge 映射，给 prompt 追加色彩/风格提示词，返回 (new_prompt, extra_negative)。"""
+    if not token or not bridge:
+        return prompt, ""
+
+    bg_tone = token.get("bgTone", "light")
+    primary_color = token.get("primaryColor", "")
+    mapping = bridge.get("bgTone_mappings", {}).get(bg_tone)
+
+    extra_positive = ""
+    if mapping:
+        color_hint = mapping.get("prompt_color_hint", "").replace("{primaryColor}", primary_color)
+        style_hint = mapping.get("prompt_style_hint", "")
+        extra_positive = f"{color_hint}, {style_hint}".strip(", ")
+
+    extra_negative = ""
+    neg_hints = token.get("negativePromptHints")
+    if isinstance(neg_hints, list):
+        extra_negative = ", ".join(neg_hints)
+    elif isinstance(neg_hints, str) and neg_hints:
+        extra_negative = neg_hints
+
+    if extra_positive:
+        prompt = f"{prompt}\n{extra_positive}"
+    if extra_negative:
+        prompt = f"{prompt}\n{extra_negative}"
+
+    return prompt, extra_negative
 
 # ---- aspect -> 各家支持的 size 字符串 ----
 def aspect_to_size(provider, aspect):
@@ -197,7 +245,16 @@ def main():
     ap.add_argument("--size", default="2K", help="仅 Gemini 部分模型支持")
     ap.add_argument("--base-url", default=None, help="OpenAI 兼容端点（聚合站/代理）")
     ap.add_argument("--ref", action="append", default=[], help="参考图（仅 Gemini），可多次")
+    ap.add_argument("--design-token", default=None,
+                    help="封面 skill 导出的 design-token.json 路径（可选），提供时自动适配封面色彩风格")
     args = ap.parse_args()
+
+    # ---- 若提供了 design token，注入色彩/风格提示词 ----
+    token = load_design_token(args.design_token)
+    bridge = load_bridge() if token else None
+    if token and bridge:
+        args.prompt, _extra_neg = apply_design_token_to_prompt(args.prompt, token, bridge)
+        print(f"[design-token] bgTone={token.get('bgTone')}, primaryColor={token.get('primaryColor')} → 提示词已注入封面风格", file=sys.stderr)
 
     fn = DISPATCH.get(args.provider.lower())
     if not fn:
