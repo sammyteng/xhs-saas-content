@@ -8,5 +8,6 @@ __pycache__/
 secrets.env
 .env
 demo/
+demo-longpost/
 content.confirmed.json
 小红书模拟器*.html

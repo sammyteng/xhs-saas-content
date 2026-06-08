@@ -1,32 +1,36 @@
 ---
 name: xhs-saas-content
-description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+1-9配图）+可编辑发布模拟器
+description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（JTBD）、爆款封面生成、内容正文创作、内页配图设计，到可编辑发布模拟器。
 ---
 
-# xhs-saas-content · 小红书 SaaS 内容生成器
+# xhs-saas-content · 一站式小红书 SaaS 内容生成器
 
-把一个软件/SaaS/AI 工具的卖点，做成一篇**能直接发小红书**的图文：第一人称长文 + 1-9 张不踩 AI 味的配图 + 一个可在线编辑的「发布模拟器」。
+把一个软件/SaaS/AI 工具的原始卖点，经过 JTBD 框架提炼、封面图与多图排版设计，做成一篇**能直接发小红书**的完整图文：一键生成卖点分析 + 爆款封面 + 1-9 张去 AI 味的配图 + 第一人称长文 + 一个可在线编辑的「发布模拟器」。
 
 ## 1. 目标定义（终态）
 
-运行结束时，产出目录里**已经具备**一篇可发布的小红书内容：
+运行结束时，产出目录里**已经具备**一篇包含封面和内页的完整小红书内容：
+- **产品卖点提炼报告**（JTBD 分析，记录在 `product_analysis.md` 中）。
+- **1 张爆款封面图**（`cover.png` 或 `cover.jpg`），符合小红书 3:4 比例，仅包含用户大标题、副标题与偏好品牌名（无系统风格角标，人物长相一致，但面部表情合理调整）。
 - 一份去过 AI 味、贴合所选风格的正文（**3 个候选标题**[各≤20字符] + 长文 + 标签）。
-- **1-9 张**视觉语言统一、且**不踩「一眼 AI」雷区**的配图（数量按内容定，不固定）。
-- 一个**可编辑** `小红书模拟器.html`：点标题切换、点正文直接改、单图改提示词重生成/换图、「确认内容」保存。
+- **1-9 张**视觉语言统一、且**不踩「一眼 AI」雷区**的配图（数量按内容定，不固定，使用 cover 的 `designToken` 映射实现色调和氛围一致）。
+- 一个**可编辑** `小红书模拟器.html`：可点标题切换、可编辑正文/标题、支持单图修改提示词重生成/换图、「确认内容」保存。
 - 一个 `小红书模拟器_分享版.html`：**图片全部 base64 内嵌成单文件**，发给别人不丢图（只读）。
-- 一份 `content.json`（含 titles/body/tags/images/image_prompts）。
+- 一份 `content.json`（含 titles/body/tags/images/image_prompts/designToken 等）。
 
-不是「给一段建议」，而是**交付一套能直接用、能在线改、能直接分享的成品**。
+不是「给一段建议」，而是**交付一套从分析到设计、能直接用、能在线改、能直接分享的整套成品**。
 
 ## 2. 验收清单（全满足才算完成）
 
+- [ ] `product_analysis.md` 存在，包含针对该产品的 JTBD（功能/情感/社交/场景）分析与人话卖点转化。
+- [ ] `cover.png`（或 `cover.jpg`）封面图存在，画面不带任何系统风格小字、分类名、栏目标签等，仅有用户大标题、副标题与配置的品牌名/Logo；人物如果存在，五官长相与输入人物照保持一致，表情允许调整。
 - [ ] `content.json` 存在，含 **titles（3 个，各≤20 字符）** / body / tags / images / image_prompts，正文非空。
 - [ ] 正文已过 `styles/writing-deai.md` 自检：排比≤1、金句≤1、破折号≤1、有真人语气与不确定表达。
-- [ ] 图片数量 **1-9 张**，视觉语言统一；**逐张过 `image-styles.md` 的「负面清单」**，无霓虹/赛博/悬浮芯片/发光3D字等「一眼 AI」元素。
-- [ ] `小红书模拟器.html`（编辑版）能打开：图片轮播正常、3 标题可点选、正文/标题可编辑、单图提示词框在。
+- [ ] 内容配图数量 **1-9 张**，视觉语言统一且与封面色调、氛围一致（通过 `cover-bridge.json` 映射）；**逐张过 `image-styles.md` 的「负面清单」**，无霓虹/赛博/悬浮芯片/发光3D字等「一眼 AI」元素。
+- [ ] `小红书模拟器.html`（编辑版）能打开：包含封面图及内容配图，轮播正常、3 标题可点选、正文/标题可编辑、单图提示词框在。
 - [ ] `小红书模拟器_分享版.html` 是单文件、图片已内嵌（`grep data:image` 命中），断网也能看图。
 - [ ] 产出目录自包含；**不打「AI生成」水印**。
-- [ ] 偏好已落盘：首次运行写了 profile，二次运行 `profile.py show` 能读到并复用，未重复问风格。
+- [ ] 偏好已落盘：首次运行写了 profile，保存了 `brand_name`，二次运行 `profile.py show` 能读到并复用，未重复询问风格与品牌名。
 - [ ] 防同质化：本篇创意维度经 `diversity.py check` 与最近 6 篇无 ≥3 维撞车，且已 `record` 记账。
 
 未全部勾掉前，不得向用户报「完成」。
@@ -34,9 +38,11 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
 ## 3. 输入契约
 
 用户需提供：
-- **产品信息**：产品名 + 一句话定位 + 3-6 个卖点/数据（必填）。
+- **产品原始信息**：产品名 + 功能描述 + 卖点/数据/特色等（必填，无需精细包装，由 Skill 自动提炼）。
 - **内容类型**：行业观点 / 教程 / 选型 / 经验 / 种草 / 测评 / 速报（用于推荐风格）。
-- `cover-design-token`（可选，String）：封面 skill 导出的 `design-token.json` 路径。提供时内容图自动适配封面的色彩与氛围风格，确保全套图视觉统一。
+- **品牌名称** `brand_name`（必填，首次指定后存入 profile 自动复用）：图上显示的品牌或 Logo 文字，用以强化 IP。
+- **封面人物照** `cover-image`（可选）：如果是需要人物半身像/大头贴的封面风格，提供一张人物照片路径。
+- **封面风格** `cover-style`（可选）：22 种内置封面风格 ID 之一，默认根据产品性质自动匹配推荐。
 - **生图能力**（二选一，自动判断）：
     - **Agent 自带生图**（推荐）：如在 Codex、Antigravity、Claude 等具备图片生成能力的 Agent 环境中运行，Agent 直接按提示词生图，**无需配置任何 API Key**，风格 1/2/3 均可使用。
     - **独立使用 / 手动配置 API**：若使用者自己运行脚本，可配置以下任一 API key（风格 1/2 需要）；没有 key 时可只用风格 3（HTML 渲染）出图。
@@ -45,45 +51,52 @@ description: 把 SaaS/AI 工具卖点做成可发布的小红书图文（长文+
     - `ark`（豆包·即梦/Seedream）：`ARK_API_KEY`
     - `dashscope`（通义万相）：`DASHSCOPE_API_KEY`
 - 默认值：文章风格按内容类型推荐并让用户 N 选 1；**标题产出 3 个候选（各≤20 字符）**；**配图按内容定 1-9 张**（不固定）；输出目录默认 `./xhs-output`。
-- **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」。
-- **防同质化**：profile 只锁**品牌层**(作者/IP/语气)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。撞车松紧可调：`--clash-dims N`(默认3)、`--window N`(默认6)，也可 `diversity.py check --clash-dims/--window` 临时覆盖、`diversity.py config` 看当前生效值。
-- **封面联动**（可选）：`cover-design-token`（String）— 封面 skill（`xhs-cover-skill`）导出的 `design-token.json` 路径。提供时内容图自动适配封面的色彩与氛围风格，确保全套图（封面+内页）视觉统一。不提供则一切照旧。
+- **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 + 品牌名称 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」或「修改品牌名」。
+- **防同质化**：profile 只锁**品牌层**(作者/IP/语气/品牌名)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。撞车松紧可调：`--clash-dims N`(默认3)、`--window N`(默认6)，也可 `diversity.py check --clash-dims/--window` 临时覆盖、`diversity.py config` 看当前生效值。
+- **封面联动**：本 Skill 在生成封面时会把封面使用的配色与设计参数输出为 `design-token.json`，内容配图自动加载该 Token 并通过 `cover-bridge.json` 映射适配内容图的色彩与氛围风格，确保封面与内页风格完美统一。
 
 ## 4. 工作流（含自循环）
 
 ```
-STEP 0  复述：把「目标定义」和「验收清单」打印到 stdout，确认听懂了再动手。
-STEP 0a 读偏好：python3 scripts/profile.py show
-          - 已存且用户没要求调整 → 复用其 文章风格/图片风格/生图参数(provider/model/aspect)，
-            直接跳到 STEP 1，不再问风格（省选择时间）。
-          - 首次(无 profile) 或 用户说「调整风格/换风格/重选风格」→ 进 STEP 0b 选，
-            选完 `python3 scripts/profile.py set --article-style X --image-style N --provider ... ` 覆盖保存。
-STEP 0a' 读封面 Token：若用户提供了 --cover-design-token 路径，读取 design-token.json，
-            通过 styles/cover-bridge.json 映射出内容图的配色/氛围参数，
-            后续 STEP 3/4 的提示词和 HTML 模板自动注入这些参数。
-STEP 0b 读 styles/article-styles.json + image-styles.md，推荐 2-3 个文章风格 + 图片风格 → 用户选定。
-STEP 0c 防同质化：python3 scripts/diversity.py pick → 拿到本篇〔角度/风格/结构/钩子/配图风格/标题套路〕组合；
-          python3 scripts/diversity.py check --combo '{...}' 复核与最近 6 篇无 ≥3 维撞车，撞了重 pick。
-          品牌层(作者/IP/语气) 仍沿用 profile 保持一致；创意层按这组"不撞"的维度写。
-STEP 1  写初稿：**3 个候选标题（各≤20 字符）** + 长文 + 标签，套用所选风格的人设与结构。
-STEP 2  按 styles/writing-deai.md 改写去 AI 味。
-STEP 3  读 styles/image-styles.md，**先读头部「避免一眼 AI」负面清单**，按内容定 1-9 张配图，
-        逐张推荐提示词（默认偏写实/扁平/HTML，不要霓虹科技风）→ 用户确认/微调。
-STEP 4  出图：
-          - 风格1/2：python3 scripts/gen_image.py --provider <gemini|openai|ark|dashscope> --prompt "..." --out xxx.png [--model pro] [--aspect 9:16]
-          - 风格3：写 HTML → python3 scripts/shot.py --html card.html --out xxx.png --selector "#card"
-        每张出完**对照负面清单自检**，命中「霓虹/赛博/悬浮芯片/发光3D字/HUD」等就改提示词重出。
-STEP 5  写 content.json（titles[3] / body / tags / images[1-9] / image_prompts / gen）。
-STEP 6  生成模拟器：
-          - 编辑版：python3 scripts/build_simulator.py --content content.json --out 小红书模拟器.html
-          - 分享版：python3 scripts/build_simulator.py --content content.json --out 小红书模拟器_分享版.html --embed
-        （需在线改图/确认保存时：python3 scripts/serve.py <输出目录> 起后端再用浏览器打开编辑版）
-STEP 7  ★自检循环★ 逐条核对「验收清单」：
-          - 不满足 → 定位是哪条 → 回到对应 STEP 修复 → 重新自检
-          - 全满足 → python3 scripts/diversity.py record --combo '{本篇维度}' --title "最终标题"（记账供下篇查重）
-            → 写一行成功摘要 → 退出（码 0），交付输出目录 + 两个 html 路径
-          - 循环 ≥3 轮仍未全满足 → 写「未达成」清单（缺哪条+原因）到 <输出目录>/build.log，
-            标 [TODO]，按「失败回执」返回（码 2），不假装完成
+STEP 0   复述：把「目标定义」和「验收清单」打印到 stdout，确认听懂了再动手。
+STEP 0a  读偏好与品牌：python3 scripts/profile.py show
+          - 已存且未调整偏好 → 读取 `brand_name`、封面风格、文章风格、图片风格、生图参数。
+          - 首次运行或用户请求修改：
+             1. 询问并保存用户偏好的品牌名称 `brand_name`。
+             2. 运行 `python3 scripts/profile.py set --brand "品牌名" --provider ... ` 保存基本配置。
+STEP 0b  产品卖点提炼 (JTBD)：根据用户输入的产品原始信息，参考 `styles/product-discovery.md`：
+          1. 转化“产品语言”为“用户人话语言”。
+          2. 完成 JTBD 提炼，输出一句话定位、3-5 个人话卖点、人群画像与竞品差异。
+          3. 写入产出目录的 `product_analysis.md`。
+          4. 推荐符合内容特征的 1-2 个封面风格 ID 与文章风格。
+STEP 0c  防同质化与定风格：
+          - 结合推荐与 profile，由用户选定本次封面风格与文章风格。
+          - 运行 `python3 scripts/diversity.py pick` 确定本篇的创意矩阵维度（角度/结构/钩子等）。
+          - 运行 `python3 scripts/diversity.py check` 确保创意与最近 6 篇无 ≥3 维撞车。
+STEP 0d  生成封面：
+          - 使用已确定的最佳标题、副标题，读取 profile 里的品牌名（即 `--brand` 参数）。
+          - 调用封面 skill 脚本生成封面：
+            `node ../xhs-cover-skill/scripts/generate.mjs --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" --image "人物照路径" --output-dir "输出目录" --aspect-ratio "3:4"`
+          - 封面生成脚本运行后会在输出目录产出 `cover.png` 和 `design-token.json`。
+          - 检查封面图：确保不带多余的系统标签小字；人物面部五官身份未改变，仅表情合理匹配。
+STEP 1   写正文初稿：基于 JTBD 提炼结果和防同质化矩阵，写出 **3 个候选标题（各≤20字符）** + 长文 + 标签。
+STEP 2   去 AI 味改写：根据 `styles/writing-deai.md` 规范自检改写正文。
+STEP 3   设计内容配图提示词：
+          - 自动加载步骤 0d 导出的 `design-token.json`，通过 `styles/cover-bridge.json` 映射内容配图的设计规范（色彩、氛围等）。
+          - 根据正文逻辑规划 1-9 张内容配图，按照 `styles/image-styles.md` 生成包含 `designToken` 的提示词。
+          - **务必对照「避免一眼 AI」负面清单**进行初步自检。
+STEP 4   生成内容配图：
+          - 按照规划好的提示词与图片风格生成配图：
+            - 风格1/2：python3 scripts/gen_image.py --provider ... --prompt "..." --out xxx.png --aspect 3:4
+            - 风格3：写 HTML → python3 scripts/shot.py --html card.html --out xxx.png --selector "#card"
+          - 生成后再次对照负面清单（无发光3D字、悬浮芯片等）自检。
+STEP 5   写 content.json：整理所有标题、正文、标签、配图路径（含 `cover.png` 及内容配图）、提示词。
+STEP 6   构建小红书模拟器：
+          - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器.html`
+          - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器_分享版.html --embed`
+STEP 7   ★自检循环★：
+          - 逐一勾选「验收清单」，如有任何不符合，返回对应的 STEP 重新生成或修正。
+          - 全部通过后，运行 `python3 scripts/diversity.py record` 记账，输出交付摘要，以退出码 0 正常结束。
 ```
 
 **自循环要点**：图少了就补、多了就删（1-9 自由）；有错字回 STEP1；图踩 AI 味雷区就改提示词重出；分享版忘了 `--embed` 会丢图，重生成。改完一定重新走 STEP7，别跳。
@@ -112,6 +125,7 @@ STEP 7  ★自检循环★ 逐条核对「验收清单」：
 
 ## 文件索引
 
+- `styles/product-discovery.md` — 产品卖点提炼与 JTBD 转化方法论
 - `styles/article-styles.json` — 8 种文章风格（A-H）+ 内容类型→风格推荐表
 - `styles/image-styles.md` — 3 种图片风格 + 提示词模板 + 配图清单
 - `styles/writing-deai.md` — 去 AI 味改写清单与自检
