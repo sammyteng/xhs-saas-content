@@ -1,5 +1,5 @@
 {
-  "_note": "示例：虚构的 AI 会议记录工具「速记盒」。titles 给 3 个候选（小红书标题≤20字符），image_prompts 与 images 一一对应，用于单图重生成。",
+  "_note": "示例：虚构的 AI 会议记录工具「速记盒」。titles 给 3 个候选（小红书标题≤20字符），image_prompts 与 images 一一对应，product_analysis 含 JTBD 提炼结果，compliance 含合规检测结果。",
   "author": "AI效率观察",
   "ip": "上海",
   "avatar": "AI",
@@ -36,5 +36,33 @@
     "provider": "gemini",
     "model": "pro",
     "aspect": "9:16"
+  },
+  "product_analysis": {
+    "positioning": "AI 会议纪要工具，开完会纪要已生成",
+    "jtbd": {
+      "functional": "自动整理会议纪要，提取待办事项",
+      "emotional": "不再焦虑纪要整理，安心专注开会",
+      "social": "同事看到效率高刮目相看",
+      "scenario": "2小时复盘会/周会/头脑风暴 → 散会即出纪要"
+    },
+    "selling_points": [
+      "散会纪要已生成，不用加班整理",
+      "能分清谁说的话，不是死板语音转文字",
+      "自动提取待办，谁负责、什么时候交",
+      "废话自动过滤，只留有用信息"
+    ]
+  },
+  "compliance": {
+    "p0_passed": true,
+    "p0_issues": [],
+    "p1_warnings": [
+      {
+        "category": "模糊功效宣称",
+        "text": "两小时会议，散会纪要已生成",
+        "location": "titles[2]",
+        "suggestion": "标题可保留，但「已生成」暗示 100% 自动完成，建议正文中有不确定表述平衡"
+      }
+    ],
+    "checked_at": "2025-06-03T12:00:00Z"
   }
 }

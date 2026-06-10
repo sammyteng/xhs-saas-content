@@ -3,7 +3,7 @@
 小红书模拟器本地后端。启动后用浏览器打开，编辑版即可：
   - 单图重生成（调 gen_image.py）
   - 上传换图
-  - 「确认内容」→ 保存 content.confirmed.json + 自动生成分享版（图片内嵌单文件）
+  - （可选）「确认内容」→ 保存 content.confirmed.json + 自动生成分享版；自动化场景可跳过确认直接使用 content.json
 
 用法：
   python3 scripts/serve.py <输出目录> [--content content.json] [--port 8000]

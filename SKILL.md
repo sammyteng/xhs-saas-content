@@ -1,6 +1,6 @@
 ---
 name: xhs-saas-content
-description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（JTBD）、爆款封面生成、内容正文创作、内页配图设计，到可编辑发布模拟器。
+description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（JTBD）、爆款封面生成、内容正文创作、内页配图设计，到可编辑发布模拟器。含内容合规检测（P0 红线拦截 + P1 风险警告）。
 ---
 
 # xhs-saas-content · 一站式小红书 SaaS 内容生成器
@@ -9,25 +9,26 @@ description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（J
 
 ## 1. 目标定义（终态）
 
-运行结束时，产出目录里**已经具备**一篇包含封面和内页的完整小红书内容：
-- **产品卖点提炼报告**（JTBD 分析，记录在 `product_analysis.md` 中）。
+运行结束时，产出目录里**已经具备**一篇包含封面和内页的完整小红书内容包：
 - **1 张爆款封面图**（`cover.png` 或 `cover.jpg`），符合小红书 3:4 比例，仅包含用户大标题、副标题与偏好品牌名（无系统风格角标，人物长相一致，但面部表情合理调整）。
 - 一份去过 AI 味、贴合所选风格的正文（**3 个候选标题**[各≤20字符] + 长文 + 标签）。
 - **1-9 张**视觉语言统一、且**不踩「一眼 AI」雷区**的配图（数量按内容定，不固定，使用 cover 的 `designToken` 映射实现色调和氛围一致）。
-- 一个**可编辑** `小红书模拟器.html`：可点标题切换、可编辑正文/标题、支持单图修改提示词重生成/换图、「确认内容」保存。
+- 一份 `content.json`（含 titles/body/tags/images/image_prompts/designToken/compliance 等）。
+- 一个**可编辑** `小红书模拟器.html`：可点标题切换、可编辑正文/标题、支持单图修改提示词重生成/换图。
 - 一个 `小红书模拟器_分享版.html`：**图片全部 base64 内嵌成单文件**，发给别人不丢图（只读）。
-- 一份 `content.json`（含 titles/body/tags/images/image_prompts/designToken 等）。
 
-不是「给一段建议」，而是**交付一套从分析到设计、能直接用、能在线改、能直接分享的整套成品**。
+**交付物 = `content.json` + 模拟器（编辑版 + 分享版）+ 封面图 + 内容配图**。不额外生成中间分析文档（JTBD 分析结果直接写入 `content.json` 的 `product_analysis` 字段）。
+
+**发布确认**：建议在发布前由用户确认内容，但自动化场景可跳过确认直接交付。本 skill 只生成内容，**不自动发布**到小红书。
 
 ## 2. 验收清单（全满足才算完成）
 
-- [ ] `product_analysis.md` 存在，包含针对该产品的 JTBD（功能/情感/社交/场景）分析与人话卖点转化。
 - [ ] `cover.png`（或 `cover.jpg`）封面图存在，画面不带任何系统风格小字、分类名、栏目标签等，仅有用户大标题、副标题与配置的品牌名/Logo；人物如果存在，五官长相与输入人物照保持一致，表情允许调整。
-- [ ] `content.json` 存在，含 **titles（3 个，各≤20 字符）** / body / tags / images / image_prompts，正文非空。
+- [ ] `content.json` 存在，含 **titles（3 个，各≤20 字符）** / body / tags / images / image_prompts / product_analysis / compliance，正文非空。
 - [ ] 正文已过 `styles/writing-deai.md` 自检：排比≤1、金句≤1、破折号≤1、有真人语气与不确定表达。
+- [ ] **内容合规检测已通过**：P0（红线）零命中，P1（风险）已标注在 `content.json` 的 `compliance` 字段中。
 - [ ] 内容配图数量 **1-9 张**，视觉语言统一且与封面色调、氛围一致（通过 `cover-bridge.json` 映射）；**逐张过 `image-styles.md` 的「负面清单」**，无霓虹/赛博/悬浮芯片/发光3D字等「一眼 AI」元素。
-- [ ] `小红书模拟器.html`（编辑版）能打开：包含封面图及内容配图，轮播正常、3 标题可点选、正文/标题可编辑、单图提示词框在。
+- [ ] `小红书模拟器.html`（编辑版）能打开：包含封面图及内容配图，轮播正常、3 标题可点选、正文/标题可编辑。
 - [ ] `小红书模拟器_分享版.html` 是单文件、图片已内嵌（`grep data:image` 命中），断网也能看图。
 - [ ] 产出目录自包含；**不打「AI生成」水印**。
 - [ ] 偏好已落盘：首次运行写了 profile，保存了 `brand_name`，二次运行 `profile.py show` 能读到并复用，未重复询问风格与品牌名。
@@ -65,59 +66,94 @@ STEP 0a  读偏好与品牌：python3 scripts/profile.py show
              1. 询问并保存用户偏好的品牌名称 `brand_name`。
              2. 运行 `python3 scripts/profile.py set --brand "品牌名" --provider ... ` 保存基本配置。
 STEP 0b  产品卖点提炼 (JTBD)：根据用户输入的产品原始信息，参考 `styles/product-discovery.md`：
-          1. 转化“产品语言”为“用户人话语言”。
+          1. 转化"产品语言"为"用户人话语言"。
           2. 完成 JTBD 提炼，输出一句话定位、3-5 个人话卖点、人群画像与竞品差异。
-          3. 写入产出目录的 `product_analysis.md`。
+          3. 结果存入 content.json 的 `product_analysis` 字段（不单独生成 md 文件）。
           4. 推荐符合内容特征的 1-2 个封面风格 ID 与文章风格。
 STEP 0c  防同质化与定风格：
           - 结合推荐与 profile，由用户选定本次封面风格与文章风格。
           - 运行 `python3 scripts/diversity.py pick` 确定本篇的创意矩阵维度（角度/结构/钩子等）。
           - 运行 `python3 scripts/diversity.py check` 确保创意与最近 6 篇无 ≥3 维撞车。
-STEP 0d  生成封面：
-          - 使用已确定的最佳标题、副标题，读取 profile 里的品牌名（即 `--brand` 参数）。
+STEP 0d  生成封面（优先级递降）：
+          ① LLM 生图 + 人物形象（最优）：如用户提供了 cover-image（人物照），优先用 LLM 生图能力
+            （Agent 自带或 API）按风格模板 prompt + 人物参考照生成带人物的封面。
+          ② LLM 生图（次优）：无人物照时，仍用 LLM 生图能力按风格 prompt 直接生成纯设计封面。
+          ③ HTML 渲染兜底（最后）：LLM 生图不可用或连续失败时，退回 HTML 模板 + playwright 截图。
           - 调用封面 skill 脚本生成封面：
             `node ../xhs-cover-skill/scripts/generate.mjs --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" --image "人物照路径" --output-dir "输出目录" --aspect-ratio "3:4"`
           - 封面生成脚本运行后会在输出目录产出 `cover.png` 和 `design-token.json`。
           - 检查封面图：确保不带多余的系统标签小字；人物面部五官身份未改变，仅表情合理匹配。
 STEP 1   写正文初稿：基于 JTBD 提炼结果和防同质化矩阵，写出 **3 个候选标题（各≤20字符）** + 长文 + 标签。
 STEP 2   去 AI 味改写：根据 `styles/writing-deai.md` 规范自检改写正文。
+STEP 2a  ★内容合规检测★：按 `styles/content-compliance.md` 规范扫描正文+标题+标签：
+          - **P0（红线拦截）**：命中任一 → 必须修改后才能继续，否则发布大概率被删帖/限流/封号。
+          - **P1（风险警告）**：命中 → 在 content.json 的 compliance.warnings 中标注，建议用户知悉。
+          - 检测结果写入 content.json 的 `compliance` 字段：
+            { "p0_passed": true/false, "p0_issues": [...], "p1_warnings": [...], "checked_at": "ISO时间" }
+          - P0 未通过 → 回 STEP 1 重写相关部分，再重新检测，直到通过。
 STEP 3   设计内容配图提示词：
           - 自动加载步骤 0d 导出的 `design-token.json`，通过 `styles/cover-bridge.json` 映射内容配图的设计规范（色彩、氛围等）。
           - 根据正文逻辑规划 1-9 张内容配图，按照 `styles/image-styles.md` 生成包含 `designToken` 的提示词。
           - **务必对照「避免一眼 AI」负面清单**进行初步自检。
-STEP 4   生成内容配图：
-          - 按照规划好的提示词与图片风格生成配图：
-            - 风格1/2：python3 scripts/gen_image.py --provider ... --prompt "..." --out xxx.png --aspect 3:4
-            - 风格3：写 HTML → python3 scripts/shot.py --html card.html --out xxx.png --selector "#card"
+STEP 4   生成内容配图（优先级同封面）：
+          ① LLM 生图（Agent 自带或 API）：优先用 LLM 按提示词直接生成配图。
+          ② HTML 渲染兜底：LLM 不可用时，写 HTML → python3 scripts/shot.py 截图。
           - 生成后再次对照负面清单（无发光3D字、悬浮芯片等）自检。
-STEP 5   写 content.json：整理所有标题、正文、标签、配图路径（含 `cover.png` 及内容配图）、提示词。
+STEP 5   写 content.json：整理所有标题、正文、标签、配图路径（含 `cover.png` 及内容配图）、提示词、JTBD 分析、合规检测结果。
 STEP 6   构建小红书模拟器：
           - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器.html`
           - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器_分享版.html --embed`
 STEP 7   ★自检循环★：
           - 逐一勾选「验收清单」，如有任何不符合，返回对应的 STEP 重新生成或修正。
           - 全部通过后，运行 `python3 scripts/diversity.py record` 记账，输出交付摘要，以退出码 0 正常结束。
+          - 交付物：content.json + 模拟器（编辑版+分享版）+ 图片文件。不额外生成其他文件。
+          - 不发送飞书/钉钉/邮件等渠道通知，仅在 stdout 输出交付摘要。
 ```
 
 **自循环要点**：图少了就补、多了就删（1-9 自由）；有错字回 STEP1；图踩 AI 味雷区就改提示词重出；分享版忘了 `--embed` 会丢图，重生成。改完一定重新走 STEP7，别跳。
 
-## 5. 副作用与权限
+## 5. 内容合规检测规范
+
+> 发布前自动扫描正文、标题、标签，分 P0（红线拦截）和 P1（风险警告）两级。详见 `styles/content-compliance.md`。
+
+### P0 · 红线拦截（命中任一 → 必须修改）
+
+| 类别 | 规则 | 示例 |
+|------|------|------|
+| **诱导互动** | 禁止明示/暗示「点赞/收藏/评论可换取利益」 | ❌「点赞+收藏，私信领教程」「双击❤️抽奖」 |
+| **免费送/福利引导** | 禁止以免费/赠送/福利为钩子换取互动行为 | ❌「免费领取」「转发抽送」「评论区送福利」 |
+| **互赞互关/涨粉** | 禁止互关互赞、求关注、养号等操作性话术 | ❌「互关互赞」「关注必回」「新号求关注」 |
+| **违禁词** | 禁止广告法/平台黑名单词（最/第一/国家级/无副作用等） | ❌「全网最低价」「国家级认证」「无任何副作用」 |
+| **站外导流** | 禁止引导加微信/QQ/跳转外部链接 | ❌「加V：xxx」「点击链接购买」「淘宝搜索」 |
+| **批量无意义问答** | 禁止在正文/评论中植入无意义的自问自答刷互动 | ❌「Q: 好用吗？A: 超好用！」×5 条刷屏 |
+
+### P1 · 风险警告（标注提醒，不强制拦截）
+
+| 类别 | 说明 |
+|------|------|
+| 软性引导互动 | 「觉得有用可以收藏一下」「欢迎评论区讨论」等轻度引导，不违规但有被限流风险 |
+| 模糊功效宣称 | 「效果立竿见影」「用了就回不去了」等夸张但未触及违禁词的表述 |
+| 对比贬低竞品 | 「比 XX 好用 100 倍」等未列数据的主观贬低，可能触发举报 |
+| 敏感话题边缘 | 涉及薪资/裁员/政策评价等可能触发审核的敏感内容 |
+
+## 6. 副作用与权限
 
 - **写入**：只写用户指定的输出目录（默认 `./xhs-output`）；偏好 `~/.config/xhs-saas-content/profile.json` 与历史账本 `~/.config/xhs-saas-content/history.json`（可用 `XHS_PROFILE`/`XHS_HISTORY` 改路径）。其余路径不碰。
 - **网络/API**：Agent 自带生图时无需外部 API；独立使用时风格 1/2 调用所选生图模型（Gemini / OpenAI / 豆包·即梦 / 通义万相）。所有 key **从环境变量读取，绝不写死在文件里**。
-- **依赖**：`pip install pillow playwright` + `playwright install chromium`（风格3）；生图按所选 provider 装其一：`google-genai` / `openai` / `volcengine-python-sdk[ark]` / `dashscope`。
-- **本地服务**：`scripts/serve.py` 起本地 http 服务（默认 127.0.0.1:8000），仅供编辑版模拟器调用单图重生成/换图；「确认内容」写 `content.confirmed.json` 并自动生成分享版 html。
+- **依赖**：`pip install pillow playwright` + `playwright install chromium`（HTML 渲染兜底）；生图按所选 provider 装其一：`google-genai` / `openai` / `volcengine-python-sdk[ark]` / `dashscope`。
+- **本地服务**：`scripts/serve.py` 起本地 http 服务（默认 127.0.0.1:8000），仅供编辑版模拟器调用单图重生成/换图。
 - **破坏性**：不就地覆盖原图（重生成/换图都写新文件名）；不删除任何用户文件。
-- **发布**：本 skill 只生成内容，**不自动发布**到小红书（确认后进入发布流程，发布动作暂未实现）。
+- **通知**：不发送飞书/钉钉/邮件/Slack 等任何外部渠道通知。所有交付信息仅通过 stdout 输出。
+- **发布**：本 skill 只生成内容，**不自动发布**到小红书。建议发布前由用户确认，自动化场景可跳过确认直接交付内容包。
 
-## 6. 失败回执（不静默退出）
+## 7. 失败回执（不静默退出）
 
 任一步骤失败时：
 1. **明确报错**：打印失败的 STEP、命令、原始错误信息。
 2. **给备选方案**：
-   - 没有 API key 且 Agent 无生图能力 / 生图失败 → 换一家 provider，或退回风格3（HTML 渲染）出图。
+   - 没有 API key 且 Agent 无生图能力 / 生图失败 → 换一家 provider，或退回 HTML 渲染兜底出图。
    - playwright 没装 → 提示安装命令，或改用 LLM 生图。
-   - 中文出错字 → 优先 `--provider gemini --model pro`，或退回风格3（HTML，零错字）。
+   - 中文出错字 → 优先 `--provider gemini --model pro`，或退回 HTML 渲染兜底（零错字）。
    - 模型命中安全过滤 → 调整提示词重试（最多重试 1 次）。
 3. **不假装成功**：未达成验收清单就如实说明缺哪条、卡在哪里，让用户决策。
 4. **回执落盘**：把失败/未达成清单写入 `<输出目录>/build.log`（含时间、失败 STEP、原始报错）。
@@ -126,16 +162,16 @@ STEP 7   ★自检循环★：
 ## 文件索引
 
 - `styles/product-discovery.md` — 产品卖点提炼与 JTBD 转化方法论
+- `styles/content-compliance.md` — 小红书内容合规检测规范（P0 红线 + P1 风险）
 - `styles/article-styles.json` — 8 种文章风格（A-H）+ 内容类型→风格推荐表
 - `styles/image-styles.md` — 3 种图片风格 + 提示词模板 + 配图清单
 - `styles/writing-deai.md` — 去 AI 味改写清单与自检
 - `styles/angle-matrix.md` — 选题角度矩阵 + 钩子/结构/标题轮换池（防同质化）
 - `styles/cover-bridge.json` — 封面 designToken → 内容图视觉适配映射表（bgTone/fontVibe 映射）
 - `scripts/gen_image.py` — 多模型文生图（gemini/openai/ark·即梦/dashscope）
-- `scripts/shot.py` — HTML → 高清 PNG（playwright）
+- `scripts/shot.py` — HTML → 高清 PNG（playwright，仅作为 LLM 生图的兜底方案）
 - `scripts/build_simulator.py` — content.json → 模拟器 HTML（默认编辑版；加 `--embed` 出图片内嵌的分享版）
-- `scripts/serve.py` — 编辑版本地后端（单图重生成/换图/确认保存+自动生成分享版）
+- `scripts/serve.py` — 编辑版本地后端（单图重生成/换图）
 - `scripts/profile.py` — 风格/生图偏好记忆（show/set/reset），二次运行自动复用
 - `scripts/diversity.py` — 反同质化引擎（pick/check/record + 历史账本），多篇轮换不撞
-- `scripts/watermark.py` — （可选，默认不用）批量打水印工具
 - `examples/content.sample.json` — 示例（含 3 候选标题 + image_prompts，虚构产品，可直接套改）

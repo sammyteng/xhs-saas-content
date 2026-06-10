@@ -2,7 +2,7 @@
 """
 从 content.json 生成「小红书发布模拟器」HTML。两种产物：
 
-  # 编辑版（配合 serve.py：可改文案 / 单图重生成 / 换图 / 确认保存）
+  # 编辑版（配合 serve.py：可改文案 / 单图重生成 / 换图）
   python3 build_simulator.py --content content.json --out 小红书模拟器.html
 
   # 分享版（图片 base64 内嵌成单文件，发给别人不丢图，只读预览）
@@ -210,7 +210,7 @@ function bust(n){ return SRC[n] ? srcOf(n) : srcOf(n)+'?t='+Date.now(); }
 function renderHead(){
   $('modehint').innerHTML = SHARE
     ? '只读分享版 · 图片已内嵌单文件 · 左屏翻图（← →）· 右屏看完整内容'
-    : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文/标签直接改 · 改完点「确认内容」保存';
+    : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文/标签直接改 · 满意后可点「确认内容」导出';
   $('av').textContent = DATA.avatar || 'AI';
   $('nm').textContent = DATA.author || '';
   $('sub').textContent = 'IP属地：' + (DATA.ip || '');
@@ -298,7 +298,7 @@ function upload(file){
   fr.readAsDataURL(file);
 }
 
-/* ---- 确认内容 → 保存 JSON + 生成分享版 ---- */
+/* ---- 确认内容（建议操作，自动化可跳过） → 保存 JSON ---- */
 function parseTags(){
   return (($('tags').innerText)||'').split(/[#\s,，、]+/).map(s=>s.trim()).filter(Boolean);
 }
@@ -318,7 +318,7 @@ async function confirmContent(){
     try{
       const r=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const j=await r.json();
-      if(j.ok) stat('✓ 已确认并保存：'+j.path+'　|　分享版：'+(j.share||'-')+'（发布流程待开发）');
+      if(j.ok) stat('✓ 已确认并保存：'+j.path+'　|　分享版：'+(j.share||'-'));
       else alert('保存失败：'+j.error);
     }catch(e){ alert('保存失败：'+e); }
   } else {
