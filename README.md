@@ -1,6 +1,6 @@
 # xhs-saas-content
 
-为 SaaS / 软件 / AI 工具一键产出**可直接发小红书**的图文内容：第一人称长文 + **1-9 张不踩「AI 味」的配图** + 一个**可在线编辑的发布模拟器**，并能导出**图片内嵌的单文件分享版**。含**内容合规检测**（P0 红线拦截 + P1 风险警告）。
+为 SaaS / 软件 / AI 工具一键产出**可直接发小红书**的图文内容：第一人称长文 + **1-9 张不踩「AI 味」的配图** + 一个**左图右文、图片内嵌的单文件只读发布模拟器**（发给别人不丢图）。含**内容合规检测**（P0 红线拦截 + P1 风险警告）。
 
 ## 它能干嘛
 
@@ -15,9 +15,9 @@
 3. **先写文案**：去过「AI 腔」的真人感长文，**给 3 个候选标题（各≤20 字符）** + 标签。
 4. **再照着定好的标题/正文做图**：1 张封面 + 1-9 张同一视觉语言的配图（LLM 生图优先 / HTML 卡片兜底），**自动规避霓虹科技等一眼假的 AI 图**（先文案后生图，图才贴内容）。
 5. **内容合规检测（两道闸）**：文本层扫正文/标题/标签；图生成后再扫「图上印的字」，P0 红线拦截（虚假体验/违禁词/站外导流等；AIGC 标识默认关闭），P1 风险标注。
-6. 生成 HTML 模拟器（编辑版可改文案/切标题/换图 + 分享版图片内嵌单文件）。
+6. 生成 HTML 模拟器（左图右文、图片内嵌的单文件只读分享版，发给别人不丢图）。
 
-**交付物 = `content.json` + 模拟器（编辑版+分享版）+ 封面图 + 内容配图**。
+**交付物 = `content.json` + 模拟器（单文件只读分享版）+ 封面图 + 内容配图**。
 
 ## 安装依赖
 
@@ -59,15 +59,14 @@ python3 scripts/gen_image.py --provider gemini --model pro --aspect 9:16 \
 # 2. 生图（HTML 卡片，零错字、作为 LLM 生图的兜底方案）
 python3 scripts/shot.py --html card.html --out xhs-output/img_quote.png --selector "#card" --w 1080 --h 1350
 
-# 3. 生成模拟器（编辑版 + 分享版）
-python3 scripts/build_simulator.py --content content.json --out xhs-output/小红书模拟器.html
-python3 scripts/build_simulator.py --content content.json --out xhs-output/小红书模拟器_分享版.html --embed
+# 3. 生成模拟器（左图右文、图内嵌、只读的单文件分享版）
+python3 scripts/build_simulator.py --content content.json --out xhs-output/小红书模拟器.html --embed
 ```
 
 `content.json` 格式见 `examples/content.sample.json`（含 `titles[3]`、`image_prompts` 和 `compliance`）。
 
-- **编辑版** `小红书模拟器.html`：可改文案/换图/重生成。
-- **分享版** `小红书模拟器_分享版.html`：单文件、图片内嵌，直接发给别人。
+- **交付版** `小红书模拟器.html`：左图右文、单文件、图片内嵌、只读，直接发给别人不丢图。
+- （可选编辑版：不加 `--embed` 生成，配合 `serve.py` 可改文案/换图；默认不交付。）
 - 建议发布前确认内容，自动化场景可跳过确认直接交付。
 
 ## 内容合规检测
@@ -126,8 +125,8 @@ xhs-saas-content/
 ├── scripts/
 │   ├── gen_image.py          # 多模型文生图（gemini/openai/ark·即梦/dashscope）
 │   ├── shot.py               # HTML → PNG（LLM 生图的兜底方案）
-│   ├── build_simulator.py    # 模拟器生成器（--embed 出内嵌分享版）
-│   ├── serve.py              # 编辑版本地后端（重生成/换图）
+│   ├── build_simulator.py    # 模拟器生成器（左图右文；--embed 出图内嵌只读分享版）
+│   ├── serve.py              # 可选编辑版的本地后端（重生成/换图）
 │   ├── profile.py            # 风格/生图偏好记忆（二次运行自动复用）
 │   └── diversity.py          # 反同质化引擎（多篇轮换不撞）
 └── examples/

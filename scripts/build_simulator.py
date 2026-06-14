@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-从 content.json 生成「小红书发布模拟器」HTML。两种产物：
+从 content.json 生成「小红书发布模拟器」HTML（左图右文结构）。
 
-  # 编辑版（配合 serve.py：可改文案 / 单图重生成 / 换图）
-  python3 build_simulator.py --content content.json --out 小红书模拟器.html
+  # 交付版（默认）：图片 base64 内嵌的单文件、只读预览，发给别人不丢图
+  python3 build_simulator.py --content content.json --out 小红书模拟器.html --embed
 
-  # 分享版（图片 base64 内嵌成单文件，发给别人不丢图，只读预览）
-  python3 build_simulator.py --content content.json --out 小红书模拟器_分享版.html --embed
+  # 可选·编辑版（不加 --embed，配合 serve.py 可改文案/重生成/换图；当前默认不交付）
+  python3 build_simulator.py --content content.json --out 小红书模拟器_编辑版.html
 
 content.json 字段（均可选，缺省有默认值）：
 {
@@ -154,22 +154,6 @@ HTML = r"""<!DOCTYPE html>
   .stat{width:100%;font-size:12.5px;color:#0071e3;}
   .hint{font-size:11.5px;color:#8a8a93;}
   .needserv{font-size:11px;color:#8a8a93;line-height:1.5;}
-
-  /* ===== 分享版（SHARE）竖屏手机版式：纵向堆叠，更像小红书详情页 ===== */
-  /* 图轮播 → 标题 → 正文 → 标签 → 作者 → 底部互动栏。编辑版不受影响（双栏工作台）。 */
-  .note.share{width:390px;max-width:96vw;height:auto;max-height:none;flex-direction:column;}
-  .note.share .media{width:100%;flex-shrink:0;}
-  .note.share .stagebox{aspect-ratio:3/4;flex:none;}
-  .note.share .arrow{top:50%;}
-  .note.share .rail{height:72px;}
-  .note.share .thumb{height:56px;}
-  .note.share .panel{flex:none;width:100%;}
-  /* 用 order 把作者块挪到正文/标签之后，符合小红书详情页阅读顺序 */
-  .note.share .author{order:2;border-bottom:none;border-top:1px solid #f3f3f3;padding:14px 20px;}
-  .note.share .body{order:1;flex:none;overflow:visible;padding:16px 20px 6px;}
-  .note.share .titlebar{font-size:18px;}
-  .note.share .ntext{font-size:15px;}
-  .note.share .botbar{order:3;}
 </style>
 </head>
 <body>
@@ -236,7 +220,7 @@ function bust(n){ return SRC[n] ? srcOf(n) : srcOf(n)+'?t='+Date.now(); }
 
 function renderHead(){
   $('modehint').innerHTML = SHARE
-    ? '只读分享版 · 图片已内嵌单文件 · 上下滑动查看完整笔记（← → 翻图）'
+    ? '只读分享版 · 图片已内嵌单文件 · 左图右文 · ← → 翻图'
     : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文/标签直接改 · 满意后可点「确认内容」导出';
   $('av').textContent = DATA.avatar || 'AI';
   $('nm').textContent = DATA.author || '';
@@ -382,11 +366,10 @@ function init(){
                     && DATA.titleIndex < (DATA.titles||[]).length) ? DATA.titleIndex : 0;
   renderHead(); renderTitles(); setTitle(startIdx); renderBody(); renderRail(); set(0);
   if(SHARE){
-    // 分享版：竖屏手机版式 + 隐藏所有「只给编辑者看」的部件
-    document.querySelector('.note').classList.add('share');
-    $('imgtools').style.display='none';
+    // 分享版：左右结构 + 只读（隐藏所有「只给编辑者看」的部件）
+    $('imgtools').style.display='none';      // 改图/换图/提示词工具
     $('btnconfirm').style.display='none';
-    $('cnt').style.display='none';          // 标题字数计数器
+    $('cnt').style.display='none';           // 标题字数计数器
     $('titlebar').classList.remove('edit');
     $('ntext').classList.remove('edit');
   } else {
