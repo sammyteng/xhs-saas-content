@@ -54,7 +54,7 @@
     ]
   },
   "compliance": {
-    "ai_disclosure": "本文由 AI 辅助创作整理",
+    "ai_disclosure": "",
     "p0_passed": true,
     "p0_issues": [],
     "p1_passed": true,
