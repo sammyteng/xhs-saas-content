@@ -53,10 +53,11 @@
     ]
   },
   "compliance": {
+    "ai_disclosure": "本文由 AI 辅助创作整理",
     "p0_passed": true,
     "p0_issues": [],
     "p1_passed": true,
     "p1_issues": [],
-    "checked_at": "2025-06-03T12:00:00Z"
+    "checked_at": "2026-06-03T12:00:00Z"
   }
 }
