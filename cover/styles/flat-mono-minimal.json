@@ -1,0 +1,13 @@
+{
+  "name": "插画极简·单色",
+  "illustration": true,
+  "prompt": "小红书封面设计，竖版 3:4。\n\n【画面类型】无真人照片的极简平面设计 / 单色线条插画封面，由你直接矢量绘制，不放任何真实人物照片。\n\n【布局要求】\n- 大量留白是第一原则：画面 60% 以上是干净空白。\n- 一个超大粗体主标题占据视觉重心（上部或居中），副标题极小、克制；底部正中放品牌名。\n- 一个简单的线条插画元素安静地放在角落或标题旁，不喧宾夺主。\n\n【背景与配色】\n- 背景：纯白或极浅的灰白 / 米白（约 #FAFAF7）。\n- 只用 1 个强调色（朱红 #FF5A36 或克制蓝 #2F6DF6，二选一作为唯一亮色，用于关键词 / 图标 / 小色块）；墨黑 #1A1A1A 只用于主标题与正文文字，绝不作为背景或主色（背景始终是纯白 / 米白）。\n- 严格单色体系，不要第二个抢眼颜色。\n\n【文字样式】\n- 主标题：墨黑或唯一强调色、极粗无衬线黑体、超大字号、字距收紧，强对比、设计感强。\n- 副标题：中灰、极小字号、克制。\n- 中文笔画完整、排版精准、无错字与乱码。\n\n【插画元素】\n- 只用唯一强调色画 1 个极简的单线条插画图标 / 几何符号（如箭头、圆、对勾、抽象图形、单一物件轮廓），线条均匀利落，点到为止。\n\n【核心特效 - 必须实现】\n- 极致留白 + 大字 + 单色 = 高端设计 / 极简品牌质感（瑞士国际主义风）。\n- 主标题第一眼抓人，整体干净、克制、贵气。\n\n【禁止事项】\n- 不要真实人物照片、不要写实摄影质感。\n- 不要霓虹、赛博、发光 HUD、发光 3D 字、镜头光晕、渐变堆叠、塑料感渲染。\n- 不要多种颜色、不要花哨装饰、不要乱码英文与错字。\n\n【氛围】极简、高级、克制、设计感、瑞士风。\n- 底部正中可放品牌名小字（使用 {brand_name}，强调色或墨黑）。无品牌名时不显示。\n",
+  "designToken": {
+    "primaryColor": "#FF5A36",
+    "accentColor": "#1A1A1A",
+    "bgTone": "light",
+    "fontVibe": "bold-sans",
+    "mood": "极简/高级/瑞士风/设计感",
+    "negativePromptHints": "no real person photo, no neon, no cyberpunk, no glowing 3D text, no gradients, single accent color only, white/off-white background only, generous whitespace, minimal swiss-style flat vector, only the given title text, no extra letters/labels on the illustration"
+  }
+}

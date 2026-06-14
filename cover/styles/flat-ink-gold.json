@@ -1,0 +1,13 @@
+{
+  "name": "插画墨金·高级",
+  "illustration": true,
+  "prompt": "小红书封面设计，竖版 3:4。\n\n【画面类型】无真人照片的纯扁平插画 / 极简平面设计封面，由你直接矢量绘制，不放任何真实人物照片。\n\n【布局要求】\n- 深色背景占满画面；主标题居中或上对齐、字号巨大；副标题在其下；底部正中放品牌名。\n- 大量留白（深色留白），构图克制、有秩序感。\n\n【背景与配色】\n- 背景：墨色 / 深墨绿 / 深藏蓝纯底（约 #16201C 或 #14161E），沉稳高级。\n- 主色：低调的金色 / 香槟金（约 #C9A227）用于标题与线条点缀；正文可用米白（约 #F2EBDA）。\n- 只用「深底 + 金 + 米白」三色，不要花哨。\n\n【文字样式】\n- 主标题：金色或米白、粗衬线体 / 高级感无衬线体、大字号、字距讲究。\n- 副标题：米白或浅金、字号小、字重轻。\n- 中文笔画完整、排版精致、无错字与乱码。\n\n【插画元素】\n- 用极简的金色细线条画 1 个克制的几何 / 抽象插画元素（如细线山形、圆环、罗盘、折线增长曲线、单株植物剪影），点到为止。\n- 扁平矢量、线条精细均匀，金色仅小面积点缀，营造高级留白质感；不要堆砌。\n\n【核心特效 - 必须实现】\n- 深色底 + 金色细节 = 高客单 / 财经 / 高端品牌的质感。\n- 主标题第一眼可读，整体安静、克制、贵气。\n\n【禁止事项】\n- 不要真实人物照片、不要写实摄影质感。\n- 不要霓虹辉光、赛博朋克、发光 HUD、发光 3D 字、镜头光晕、能量光效（金色只做哑光细线，不发光）。\n- 不要塑料感渲染、不要乱码英文与错字。\n\n【氛围】高级、沉稳、贵气、专业、财经 / 高端。\n- 底部正中可放品牌名小字（使用 {brand_name}，金色）。无品牌名时不显示。\n",
+  "designToken": {
+    "primaryColor": "#C9A227",
+    "accentColor": "#F2EBDA",
+    "bgTone": "dark",
+    "fontVibe": "editorial",
+    "mood": "高级/财经/高端/墨金",
+    "negativePromptHints": "no real person photo, no neon glow, no cyberpunk, no glowing gold, matte gold thin lines only, no 3D glossy text, flat minimal vector illustration, no fake/pseudo-English latin letters, only the given Chinese title text"
+  }
+}

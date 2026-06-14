@@ -17,7 +17,7 @@
 - `styles/` — 文风 / 合规 / 去 AI 味 / 角度矩阵 / 封面联动等配置
 - `scripts/` — A 层脚本（见下表）
 - `examples/` `demo*/` — 示例与样例产出
-- `cover/` — **已并入的封面生成器**（22 种人物封面风格 + `generate.mjs`，Node+sharp）；`node cover/scripts/generate.mjs` 调用，首次 `cd cover && npm install`。人物照封面走它（`--image` 必填、需用户自配 chat-image key）；纯设计封面走 `gen_image.py`。**仓库不含任何 key**（用户自配）。
+- `cover/` — **已并入的封面生成器**（28 种风格 + `generate.mjs`，Node+sharp）；`node cover/scripts/generate.mjs` 调用，首次 `cd cover && npm install`。**22 种人物照封面**（`--image` 必填）+ **6 种无真人插画封面**（风格带 `illustration:true`，无需 `--image`，纯文生图直接画，如 `flat-blue-mascot`）；均需用户自配 chat-image key。**仓库不含任何 key**（用户自配）。
 
 ### scripts/ 一览
 

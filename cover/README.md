@@ -1,10 +1,11 @@
-# 内置封面生成器（cover/） — 人物照封面
+# 内置封面生成器（cover/） — 人物照封面 + 无真人插画封面
 
-> ⚠️ **本目录已并入 `xhs-saas-content`**，是它的「人物照封面生成器」。在本 skill 内的用法见主 `SKILL.md` 文末「附 · （可选）配图」。
-> - 命令：`node cover/scripts/generate.mjs --image 人物照 --style 风格ID --title "大标题" ...`（`--image` **必填**；不带参数运行可列出 22 种风格）
+> ⚠️ **本目录已并入 `xhs-saas-content`**，是它的「封面生成器」。在本 skill 内的用法见主 `SKILL.md` 文末「附 · 配图」。
+> - **人物照封面**（22 种，需真人照）：`node cover/scripts/generate.mjs --image 人物照 --style 风格ID --title "大标题" ...`
+> - **无真人插画封面**（6 种，风格带 `"illustration": true`，**无需 `--image`**）：`node cover/scripts/generate.mjs --style flat-blue-mascot --title "大标题" --subtitle "副标题" ...`
+> - 不带参数运行可列出全部 28 种风格（插画风格标 `[插画/无需人物照]`）。
 > - 首次：`cd cover && npm install`（装 sharp）
 > - **需自配你自己的 key**（chat-image 兼容接口）：`XHS_COVER_API_KEY` + `--base-url` + `--model`，或 `~/.config/xhs-cover/config.json`。**仓库不含任何 key**。
-> - 纯设计封面（无人物照）请改用 `scripts/gen_image.py`（images-API，如 gpt-image-2）。
 >
 > 以下为原独立 skill 文档（其中的 clone / 安装路径仅对「单独使用本目录」有效；并入后无需 clone）。
 
@@ -14,7 +15,7 @@
 
 ## 效果预览
 
-支持 22 种预设风格，覆盖职场、居家、综艺、文艺等各类场景。每个风格的具体定义与一句话描述请参考下方「风格列表」。
+支持 **28 种预设风格**：22 种**人物照封面**（覆盖职场、居家、综艺、文艺等场景）+ 6 种**无真人插画封面**（扁平矢量插画：蓝/暖/墨金/糖果/极简/手绘）。每个风格的具体定义见下方「风格列表」。
 
 ---
 
@@ -122,11 +123,21 @@ node ~/.codex/skills/xhs-cover-skill/scripts/generate.mjs \
   --count 1
 ```
 
+**无真人插画封面**（风格带 `illustration:true`，无需 `--image`）：
+
+```bash
+node cover/scripts/generate.mjs \
+  --style "flat-blue-mascot" \
+  --title "你的大标题" \
+  --subtitle "副标题（可选）" \
+  --aspect-ratio "3:4"
+```
+
 **支持的参数：**
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--image` | 人物照片路径（必填） | - |
+| `--image` | 人物照片路径（人物照风格**必填**；插画风格 `illustration:true` 无需此项） | - |
 | `--style` | 风格ID（必填，见下方列表） | - |
 | `--title` | 主标题（必填） | - |
 | `--subtitle` | 副标题 | 空 |
@@ -269,6 +280,39 @@ node ~/.codex/skills/xhs-cover-skill/scripts/generate.mjs \
   </tr>
 </table>
 
+### 5. 插画 / 无真人封面类（`illustration: true`，无需人物照）
+
+> 纯扁平矢量插画封面，由模型直接绘制，**不需要人物照片**。适合没有出镜需求、想要品牌吉祥物 / 信息海报感的内容。
+
+<table>
+  <tr>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-blue-mascot.jpg" width="160"><br>
+      <b>插画蓝·吉祥物</b><br><code>flat-blue-mascot</code>
+    </td>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-warm-life.jpg" width="160"><br>
+      <b>插画暖·生活感</b><br><code>flat-warm-life</code>
+    </td>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-ink-gold.jpg" width="160"><br>
+      <b>插画墨金·高级</b><br><code>flat-ink-gold</code>
+    </td>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-candy-playful.jpg" width="160"><br>
+      <b>插画糖果·俏皮</b><br><code>flat-candy-playful</code>
+    </td>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-mono-minimal.jpg" width="160"><br>
+      <b>插画极简·单色</b><br><code>flat-mono-minimal</code>
+    </td>
+    <td align="center" width="16%">
+      <img src="assets/styles/flat-handdraw-warm.jpg" width="160"><br>
+      <b>插画手绘·亲切</b><br><code>flat-handdraw-warm</code>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## 注意事项
@@ -290,11 +334,16 @@ node ~/.codex/skills/xhs-cover-skill/scripts/generate.mjs \
 ```json
 {
   "name": "风格中文名",
-  "prompt": "详细的中文设计提示词..."
+  "prompt": "详细的中文设计提示词...",
+  "illustration": true,
+  "designToken": { "primaryColor": "#1B4DD6", "accentColor": "#F4EEDE", "bgTone": "light", "fontVibe": "bold-sans", "mood": "一句话调性", "negativePromptHints": "no neon, no real person photo ..." }
 }
 ```
 
-参考现有风格格式，确保包含【布局要求】【文字样式】【核心特效】【禁止事项】【氛围】几个区块。同时附上一张效果参考图放到 `assets/styles/` 目录。
+参考现有风格格式，确保 prompt 包含【布局要求】【文字样式】【核心特效】【禁止事项】【氛围】几个区块。
+- 想做**无真人插画封面**：加 `"illustration": true`（生成时无需 `--image`，模型直接绘制）。
+- `designToken` 可选，用于封面→内页配色联动：`bgTone ∈ {dark,light,warm}`、`fontVibe ∈ {bold-sans,handwritten,editorial,playful}`。
+- 同时附上一张效果参考图放到 `assets/styles/<风格ID>.jpg`。
 
 ### 改进现有提示词
 如果你发现某个风格生成效果不好（比如文字乱码、构图不对），欢迎直接修改对应的 `prompt` 并附上改进前后的对比截图。

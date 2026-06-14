@@ -256,26 +256,19 @@ async function generateImage({ apiKey, baseUrl, apiEndpoint, model, imageBase64,
   if (isGoogle) {
     url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     headers = {};
-    body = {
-      contents: [{
-        parts: [
-          { inlineData: { mimeType: mimeType, data: imageBase64 } },
-          { text: fullPrompt }
-        ]
-      }]
-    };
+    const parts = [];
+    if (imageBase64) parts.push({ inlineData: { mimeType: mimeType, data: imageBase64 } });
+    parts.push({ text: fullPrompt });
+    body = { contents: [{ parts }] };
   } else {
     url = apiEndpoint || `${baseUrl}/v1/chat/completions`;
     headers = { 'Authorization': `Bearer ${apiKey}` };
+    const content = [];
+    if (imageBase64) content.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } });
+    content.push({ type: 'text', text: fullPrompt });
     body = {
       model,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
-          { type: 'text', text: fullPrompt },
-        ],
-      }],
+      messages: [{ role: 'user', content }],
       response_modalities: ['image', 'text'],
     };
   }
@@ -375,66 +368,74 @@ async function main() {
     console.error('   3. 命令行参数 --model <model>');
     process.exit(1);
   }
-  if (!IMAGE_PATH) { console.error('❌ 未提供图片路径（--image）'); process.exit(1); }
   if (!STYLE_ID)   {
-    console.error('❌ 未提供风格ID（--style）\n可用风格：\n' + Object.entries(STYLES).map(([id, s]) => `  ${id} - ${s.name}`).join('\n'));
+    console.error('❌ 未提供风格ID（--style）\n可用风格：\n' + Object.entries(STYLES).map(([id, s]) => `  ${id} - ${s.name}${s.illustration ? ' [插画/无需人物照]' : ''}`).join('\n'));
     process.exit(1);
   }
-  if (!TITLE)      { console.error('❌ 未提供主标题（--title）'); process.exit(1); }
-
   const style = STYLES[STYLE_ID];
   if (!style) {
     console.error(`❌ 未知风格: ${STYLE_ID}\n可用风格：\n` + Object.keys(STYLES).map(id => `  ${id} - ${STYLES[id].name}`).join('\n'));
     process.exit(1);
   }
-
-  // 读取图片
-  const resolvedImage = expandHome(IMAGE_PATH);
-  if (!fs.existsSync(resolvedImage)) {
-    console.error(`❌ 图片文件不存在: ${resolvedImage}`);
+  // 插画风格（无真人照）：style.illustration === true 时走纯文生图，不需要 --image
+  const isIllustration = style.illustration === true;
+  if (!IMAGE_PATH && !isIllustration) {
+    console.error('❌ 未提供图片路径（--image）。若要无人物照的纯插画封面，请用带 "illustration": true 的风格');
     process.exit(1);
   }
-  const ext = path.extname(resolvedImage).toLowerCase();
-  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
-    console.error(`❌ 不支持的图片格式: ${ext}（支持 JPG / PNG / WebP）`);
-    process.exit(1);
-  }
+  if (!TITLE)      { console.error('❌ 未提供主标题（--title）'); process.exit(1); }
 
-  // 处理图片方向 + 压缩
+  // 读取并处理人物照片（插画风格 isIllustration 跳过：无真人照、纯文生图）
+  let imageBase64 = null;
+  let mimeType = null;
   const tmpDir = os.tmpdir();
-  let imagePath = resolvedImage;
   let tmpFiles = [];
 
-  process.stdout.write(`🔄 处理图片（EXIF旋转+压缩）...`);
-  try {
-    const normalized = await normalizeImage(resolvedImage, {
-      noAutoOrient: NO_AUTO_ORIENT,
-      manualDeg: MANUAL_ROTATE,
-      tmpDir,
-    });
-    tmpFiles.push(normalized);
-    imagePath = normalized;
-    process.stdout.write(` ✓\n`);
-  } catch (e) {
-    process.stdout.write(`\n⚠️  图片处理失败（${e.message}），使用原图\n`);
-  }
-
-  // 超大图再压缩
-  const imageSizeBytes = fs.statSync(imagePath).size;
-  if (imageSizeBytes > 4 * 1024 * 1024) {
-    process.stdout.write(`⚠️  图片较大（${(imageSizeBytes / 1024 / 1024).toFixed(1)}MB），进一步压缩...`);
-    try {
-      const compressed = await compressImage(imagePath, tmpDir);
-      tmpFiles.push(compressed);
-      imagePath = compressed;
-      process.stdout.write(` ${(fs.statSync(imagePath).size / 1024 / 1024).toFixed(1)}MB ✓\n`);
-    } catch (e) {
-      process.stdout.write(`\n⚠️  压缩失败，继续使用当前图片\n`);
+  if (!isIllustration) {
+    const resolvedImage = expandHome(IMAGE_PATH);
+    if (!fs.existsSync(resolvedImage)) {
+      console.error(`❌ 图片文件不存在: ${resolvedImage}`);
+      process.exit(1);
     }
-  }
+    const ext = path.extname(resolvedImage).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+      console.error(`❌ 不支持的图片格式: ${ext}（支持 JPG / PNG / WebP）`);
+      process.exit(1);
+    }
 
-  const imageBase64 = fs.readFileSync(imagePath, 'base64');
-  const mimeType = detectMimeType(imagePath);
+    // 处理图片方向 + 压缩
+    let imagePath = resolvedImage;
+    process.stdout.write(`🔄 处理图片（EXIF旋转+压缩）...`);
+    try {
+      const normalized = await normalizeImage(resolvedImage, {
+        noAutoOrient: NO_AUTO_ORIENT,
+        manualDeg: MANUAL_ROTATE,
+        tmpDir,
+      });
+      tmpFiles.push(normalized);
+      imagePath = normalized;
+      process.stdout.write(` ✓\n`);
+    } catch (e) {
+      process.stdout.write(`\n⚠️  图片处理失败（${e.message}），使用原图\n`);
+    }
+
+    // 超大图再压缩
+    const imageSizeBytes = fs.statSync(imagePath).size;
+    if (imageSizeBytes > 4 * 1024 * 1024) {
+      process.stdout.write(`⚠️  图片较大（${(imageSizeBytes / 1024 / 1024).toFixed(1)}MB），进一步压缩...`);
+      try {
+        const compressed = await compressImage(imagePath, tmpDir);
+        tmpFiles.push(compressed);
+        imagePath = compressed;
+        process.stdout.write(` ${(fs.statSync(imagePath).size / 1024 / 1024).toFixed(1)}MB ✓\n`);
+      } catch (e) {
+        process.stdout.write(`\n⚠️  压缩失败，继续使用当前图片\n`);
+      }
+    }
+
+    imageBase64 = fs.readFileSync(imagePath, 'base64');
+    mimeType = detectMimeType(imagePath);
+  }
 
   // 构建 prompt
   const textPart = [
@@ -442,12 +443,20 @@ async function main() {
     SUBTITLE ? `- 副标题文字（较小展示）：${SUBTITLE}` : '',
   ].filter(Boolean).join('\n');
 
-  const GLOBAL_RULES = `\n\n【全局与人物规则】
+  const PERSON_RULES = `\n\n【全局与人物规则】
 - 允许在图片上合理放置与品牌相关的 Logo、品牌名称等品牌元素
 - 严禁在图片上放置 Skill 系统内部的风格名称、分类词汇、栏目角标、模板文案、期数编号等无意义的系统标签字样
 - 严格只使用用户提供的大标题和副标题文字，不得增减或拼写错误
 - 不得在图上添加任何随机无意义英文（如 haha、nice、wow、tag 等）
 - 必须保持人物的长相、五官特征和身份一致，但人物的面部表情可以根据画面内容/情绪进行合理调整（如微笑、专注等）`;
+  const ILLUSTRATION_RULES = `\n\n【全局与插画规则】
+- 这是一张【无真人照片】的纯插画 / 平面设计封面，由你直接绘制；不需要、也不要放入任何真实人物照片
+- 允许在图片上合理放置与品牌相关的 Logo、品牌名称等品牌元素
+- 严禁放置 Skill 系统内部的风格名称、分类词汇、栏目角标、模板文案、期数编号等无意义系统标签字样
+- 严格只使用用户提供的大标题和副标题文字，不得增减或拼写错误；中文笔画完整、无错字、无乱码
+- 不得在图上添加任何随机无意义英文或乱码字符（如 haha、nice、wow、tag、Lorem 等）
+- 如出现卡通吉祥物 / 角色 / 物件，造型完整协调、比例正常、线条干净，不畸形、不多肢`;
+  const GLOBAL_RULES = isIllustration ? ILLUSTRATION_RULES : PERSON_RULES;
   const rawPrompt = `${style.prompt}${GLOBAL_RULES}\n\n【文字内容 - 使用以下文字】\n${textPart}${EXTRA ? '\n\n【额外要求】\n' + EXTRA : ''}`;
   const fullPrompt = rawPrompt.replace(/\{brand_name\}/g, BRAND || '');
 
@@ -510,8 +519,8 @@ async function main() {
           console.log(`   🎨 Design Token → ${tokenPath}`);
         }
 
-        // 自动打开图片（macOS: open, Linux: xdg-open）
-        if (COUNT === 1) {
+        // 自动打开图片（macOS: open, Linux: xdg-open）；--no-open 可关闭（批量生成时用）
+        if (COUNT === 1 && !hasFlag('no-open')) {
           try {
             const opener = process.platform === 'darwin' ? 'open' : process.platform === 'linux' ? 'xdg-open' : null;
             if (opener) execFileSync(opener, [outputPath], { stdio: 'ignore' });
