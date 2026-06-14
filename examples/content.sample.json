@@ -24,7 +24,7 @@
   "collects": "5421",
   "comments": 218,
   "images": [],
-  "_images_note": "默认不配图 → images 留空；image_prompts 是「配图建议」。要自动出图见 SKILL.md「附·（可选）配图」，出图后把路径填进 images。",
+  "_images_note": "成品应有图：实际产出时 images 填封面+配图真实路径（有 key 走 gen_image AI 图、无 key 走 HTML 卡片 shot.py）。本示例为省体积留空，仅展示字段格式。",
   "image_prompts": [
     "写实编辑风封面：阳光洒进的居家办公桌，木质桌面上一台笔记本显示会议记录界面，旁边一杯咖啡和写着字的笔记本，自然光、浅景深、生活气；角落叠一行干净扁平的中文小标题「会议纪要 交给 AI」。no neon, no glow, no 3D text, no cyberpunk, photorealistic, looks like a real photo",
     "扁平极简信息图，白底，竖版 4:5，低饱和最多 2 个点缀色，大留白，中文标题「速记盒用起来什么样」，三个数据：整理耗时 0 分钟 / 待办自动提取 / 错字仅 2 处，简单扁平线性图标。no neon, no glow, no 3D, flat magazine style",

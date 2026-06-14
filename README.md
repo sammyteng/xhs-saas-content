@@ -1,8 +1,8 @@
 # xhs-saas-content
 
-为 SaaS / 软件 / AI 工具一键产出**可直接发小红书**的内容草稿：第一人称长文（3 候选标题+标签）+ **配图建议** + 一个**左图右文、单文件、只读的发布模拟器**。含**内容合规检测**（P0 红线 + P1 风险）。
+为 SaaS / 软件 / AI 工具一键产出**可直接发小红书的完整图文成品**：第一人称长文（3 候选标题+标签）+ **封面与 1-9 张配图** + 一个**左图右文、单文件、只读的发布模拟器**。含**内容合规检测**（P0 红线 + P1 风险）。
 
-> ⚙️ **通用版默认只产「文案 + 配图建议」，不依赖任何生图 key**；要自动出图见下方「（可选）配图」。
+> ⚙️ **默认产出含图成品**：有 key/生图能力用 AI 图，没 key 用 HTML 卡片出图（免 key、中文零错字）——任何环境都出真图。可问偏好但不卡流程。**仓库不含任何 key（用户自配）**。
 
 ## 它能干嘛
 
@@ -14,45 +14,41 @@
 然后输出：
 1. JTBD 卖点提炼（自动完成，结果写入 content.json）。
 2. 选一种小红书文章风格（行业锐评 / 教程 / 选型 / 背书 / 效率 / 认知 / 吐槽 / 快讯，共 8 种）。
-3. **先写文案**：去过「AI 腔」的真人感长文，**给 3 个候选标题（各≤20 字符）** + 标签。
-4. **配图建议**：按正文规划 1-9 条「该配什么图」（默认只给建议、不出图；要出图见下方「（可选）配图」，先文案后生图）。
-5. **内容合规检测**：扫正文/标题/标签，P0 红线拦截（虚假体验/违禁词/站外导流等；AIGC 标识默认关闭），P1 风险标注。（出图时再补扫「图上印的字」）
-6. 生成 HTML 模拟器（左图右文、单文件、只读；**无图时图位显示「配图建议」占位**，文案照常预览）。
+3. **先写文案**：去过「AI 腔」的真人感长文，**给 3 个候选标题（各≤20 字符）** + 标签（立意不招骂）。
+4. **再生成封面 + 1-9 张配图**（照文案做）：有 key 用 AI 图，没 key 用 HTML 卡片——**必出真图**，不踩「一眼 AI」雷区。
+5. **内容合规检测**：扫正文/标题/标签 + 图上印的字，P0 红线拦截（虚假体验/违禁词/站外导流等；AIGC 标识默认关闭），P1 风险标注。
+6. 生成 HTML 模拟器（左图右文、单文件、图片内嵌、只读，发给别人不丢图）。
 
-**交付物 = `content.json`（文案+配图建议）+ 模拟器（单文件只读）**。配图为可选。
+**交付物 = `content.json` + 模拟器（单文件只读）+ 封面与配图**。这是**成品（含图）**，不是「文案+建议」半成品。
 
 ## 安装依赖
 
-**核心（文案 + 模拟器）：零三方依赖**，纯 Python 标准库就能跑。
-
-**只有要自动配图时才装**（默认不配图）：
+**出图必装**（成品含图，HTML 卡片是无 key 的兜底出图方式）：
 
 ```bash
-pip install playwright && playwright install chromium   # HTML 卡片出图（免 key、中文零错字）
-# 生图模型按需装其一：
+pip install playwright && playwright install chromium   # HTML 卡片出图（免 key、中文零错字）—— 没生图 key 时靠它出成品
+# 想用 AI 生图再按需装其一 + 配 key（不装也能用 HTML 卡片出成品）：
 pip install openai          # OpenAI GPT Image（默认 image-2 = gpt-image-2）→ OPENAI_API_KEY
 pip install google-genai    # Gemini（中文最准，备选）→ GEMINI_API_KEY
 # 豆包即梦 ark / 通义万相 dashscope 同理（见 image-styles.md 生图模型表）
-export OPENAI_API_KEY=你的key
+export OPENAI_API_KEY=你的key   # 可选；不配则走 HTML 卡片
 ```
 
-## （可选）配图
+## 配图（默认就出，降级链保证有图）
 
-默认**不出图**，只给「配图建议」。要自动出图时（配好你自己的 key）：**有人物照**走内置 `cover/`（22 种人物封面风格，需 `cd cover && npm install` + 自配 chat-image key）；**纯设计封面 / 内页图**走 `gen_image.py`（你的 images-API key，如 gpt-image-2）或 HTML 卡片兜底；出图后回填 `content.json` 的 `images` 重跑模拟器。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · （可选）配图」。
+**默认就出图（成品含图）**。降级链：① 有 key/生图能力 → AI 图（人物照封面走 `cover/`，需 `cd cover && npm install` + 自配 chat-image key；纯设计封面/内页走 `gen_image.py`，images-API key 如 gpt-image-2）② **没 key → HTML 卡片**（playwright，免 key、零错字）。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · 配图」。
 
 ## 怎么用
 
 把 SKILL.md 交给你的 Agent（或 Claude），按里面的工作流跑即可。手动跑核心脚本：
 
 ```bash
-# 默认流程：有了 content.json（文案+配图建议）后，直接生成模拟器（无图时图位显示配图建议占位）
-python3 scripts/build_simulator.py --content content.json --out xhs-output/小红书模拟器.html --embed
-
-# （可选）要自动配图时才用，提示词参考 image-styles.md 的「避免 AI 味」负面清单：
+# 1) 出图（成品必做）—— 有 key 用 AI 图、无 key 用 HTML 卡片，提示词参考 image-styles.md 负面清单
 python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 \
-  --prompt "..." --out xhs-output/img1.png        # 默认 image-2；中文老出错可换 --provider gemini --model pro
-python3 scripts/shot.py --html card.html --out xhs-output/img2.png --selector "#card" --w 1080 --h 1350  # HTML 卡片，免 key、零错字
-# 出图后把路径回填 content.json 的 images[]，再重跑上面的 build_simulator
+  --prompt "..." --out xhs-output/img1.png        # AI 图；中文老出错可换 --provider gemini --model pro
+python3 scripts/shot.py --html card.html --out xhs-output/img2.png --selector "#card" --w 1080 --h 1350  # 无 key 用 HTML 卡片
+# 2) 把图路径写进 content.json 的 images[]，再生成模拟器：
+python3 scripts/build_simulator.py --content content.json --out xhs-output/小红书模拟器.html --embed
 ```
 
 `content.json` 格式见 `examples/content.sample.json`（含 `titles[3]`、`image_prompts` 和 `compliance`）。
