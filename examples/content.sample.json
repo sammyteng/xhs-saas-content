@@ -1,5 +1,6 @@
 {
-  "_note": "示例：虚构的 AI 会议记录工具「速记盒」。titles 给 3 个候选（小红书标题≤20字符），image_prompts 与 images 一一对应，product_analysis 含 JTBD 提炼结果，compliance 含合规检测结果。",
+  "_note": "示例：虚构的 AI 会议记录工具「速记盒」。titles 给 3 个候选（小红书标题≤20字符），image_prompts 与 images 一一对应，product_analysis 含 JTBD 提炼结果，compliance 含合规检测结果。source_mode 记本篇内容来源：kb（知识库）/ direct（直接给）/ history（历史自动出题）。",
+  "source_mode": "direct",
   "author": "AI效率观察",
   "ip": "上海",
   "avatar": "AI",

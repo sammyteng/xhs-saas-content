@@ -48,6 +48,7 @@ def main():
     s.add_argument("--provider"); s.add_argument("--model"); s.add_argument("--aspect")
     s.add_argument("--author"); s.add_argument("--ip")
     s.add_argument("--brand")
+    s.add_argument("--product-brief", help="产品简介：产品名+一句话定位+核心卖点，供模式3历史自动出题复用")
     s.add_argument("--rotate"); s.add_argument("--style-pool")
     s.add_argument("--clash-dims"); s.add_argument("--window")
     a = ap.parse_args()
@@ -66,7 +67,8 @@ def main():
     if a.cmd == "set":
         d = load(); gen = d.get("gen", {})
         for k, v in {"article_style": a.article_style, "image_style": a.image_style,
-                     "author": a.author, "ip": a.ip, "brand": a.brand}.items():
+                     "author": a.author, "ip": a.ip, "brand": a.brand,
+                     "product_brief": a.product_brief}.items():
             if v is not None: d[k] = v
         if a.rotate is not None:
             d["rotate"] = str(a.rotate).lower() in ("1", "true", "yes", "on")
