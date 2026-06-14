@@ -49,7 +49,7 @@ coverage.xml
 *.py.cover
 .hypothesis/
 .pytest_cache/
-cover/
+# 原 Python 模板的 nose 覆盖率目录规则 `cover/` 已移除——cover/ 现为内置封面生成器目录，须纳入版本管理
 
 # Translations
 *.mo
@@ -218,3 +218,7 @@ comment.txt
 # Ralph Loop state
 .claude/.ralph-loop.local.md
 .DS_Store
+
+# Node deps (cover/ 封面生成器，下载后 npm install)
+node_modules/
+cover/node_modules/

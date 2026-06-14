@@ -49,9 +49,9 @@ jobs:
           PREFIX="xhs-saas-content-${TAG}"
           tar czf "${PREFIX}.tar.gz" \
             --transform "s,^,${PREFIX}/," \
-            scripts/ styles/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md
+            scripts/ styles/ cover/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md
           zip -r "${PREFIX}.zip" \
-            scripts/ styles/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md \
+            scripts/ styles/ cover/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md \
             -x '*.pyc' '__pycache__/*'
 
       - name: Create GitHub Release

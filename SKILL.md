@@ -198,7 +198,8 @@ STEP 6   ★自检循环★：
 - `styles/writing-deai.md` — 去 AI 味改写清单与自检
 - `styles/angle-matrix.md` — 选题角度矩阵 + 钩子/结构/标题轮换池（防同质化）
 - `styles/cover-bridge.json` — 封面 designToken → 内容图视觉适配映射表（bgTone/fontVibe 映射）
-- `scripts/gen_image.py` — 多模型文生图（gemini/openai/ark·即梦/dashscope）
+- `cover/` —（可选配图用）**内置封面生成器**：22 种人物封面风格（`cover/styles/`）+ `cover/scripts/generate.mjs`（Node+sharp，`--image` 必填 = 人物封面）；首次 `cd cover && npm install`，需用户自配 chat-image key。纯设计封面用下面的 gen_image.py。
+- `scripts/gen_image.py` — 多模型文生图（openai·image-2/gemini/ark·即梦/dashscope）
 - `scripts/shot.py` — HTML → 高清 PNG（playwright，仅作为 LLM 生图的兜底方案）
 - `scripts/build_simulator.py` — content.json → 模拟器 HTML（左图右文；默认交付 `--embed` 的图内嵌只读分享版，不加 `--embed` 为可选编辑版）
 - `scripts/serve.py` — 可选编辑版的本地后端（单图重生成/换图；默认不交付编辑版时用不到）
@@ -214,11 +215,15 @@ STEP 6   ★自检循环★：
 
 **前置生图能力（任一）**：① Agent 自带生图（Codex/Claude 等）；② API key（默认 image-2 = OpenAI `gpt-image-2`，或 `gemini`/`ark`/`dashscope`）；③ 都没有 → 用 HTML 卡片（playwright，免 key、中文零错字，见 `image-styles.md` 卡片风格库）。
 
-**A · 封面**（照 STEP 1 已定的大标题做）：
-- 优先用封面 skill：`node ../xhs-cover-skill/scripts/generate.mjs --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" [--image 人物照] --output-dir 输出目录 --aspect-ratio 3:4`
-  - ⚠️ 封面 skill 需**自己的 API 配置**（`XHS_COVER_API_KEY`/`--api-key` + `--base-url` + `--model`），它走 chat/completions 返图，与 image-2 的图片接口不同——按它的 README onboarding 配一次。
-  - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；把**实际文件名**回填到 `content.json` 的 `images[0]` 与 `cover`。
-- 没封面 skill 的 API → 用 HTML 卡片当封面（写卡片 HTML → `python3 scripts/shot.py`）。
+**A · 封面**（照 STEP 1 已定的大标题做，三条路按你的素材 + key 选其一）：
+- **有人物照 → 内置封面生成器 `cover/`**（22 种人物封面风格，已并入本 skill）：
+  `node cover/scripts/generate.mjs --image 人物照 --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" --output-dir 输出目录 --aspect-ratio 3:4`
+  - 首次先装依赖：`cd cover && npm install`（装 sharp）。`--image` **必填**（这是人物封面生成器）；不带参数运行可列出 22 种风格。
+  - 需**配你自己的 key**：它走 chat/completions 返图——配 `XHS_COVER_API_KEY` + `--base-url` + `--model`（或写 `~/.config/xhs-cover/config.json`）。**仓库不含任何 key**。
+  - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；实际文件名回填 `content.json` 的 `images[0]` 与 `cover`。
+- **无人物照 / 纯设计封面 → `gen_image.py`**（你的 images-API key，如 gpt-image-2）：
+  `python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "封面设计，含中文标题…" --out cover.png`（gpt-image-2 中文标题基本能渲染对）。
+- **没任何 key → HTML 卡片当封面**：写卡片 HTML → `python3 scripts/shot.py`（中文零错字，见 image-styles.md 卡片风格库）。
 
 **B · 内页配图**（照正文做，与封面同视觉）：
 - 加载封面的 `design-token.json`，经 `styles/cover-bridge.json` 映射配色。

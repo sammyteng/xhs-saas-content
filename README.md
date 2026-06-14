@@ -38,7 +38,7 @@ export OPENAI_API_KEY=你的key
 
 ## （可选）配图
 
-默认**不出图**，只给「配图建议」。要自动出图时（环境有生图能力）：封面优先用 `../xhs-cover-skill`（需配它自己的 API），内页图用 `gen_image.py`（默认 image-2）或 HTML 卡片兜底；出图后回填 `content.json` 的 `images` 重跑模拟器。完整步骤见 SKILL.md 文末「附 · （可选）配图」。
+默认**不出图**，只给「配图建议」。要自动出图时（配好你自己的 key）：**有人物照**走内置 `cover/`（22 种人物封面风格，需 `cd cover && npm install` + 自配 chat-image key）；**纯设计封面 / 内页图**走 `gen_image.py`（你的 images-API key，如 gpt-image-2）或 HTML 卡片兜底；出图后回填 `content.json` 的 `images` 重跑模拟器。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · （可选）配图」。
 
 ## 怎么用
 

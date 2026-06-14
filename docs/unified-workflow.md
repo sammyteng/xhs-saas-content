@@ -1,13 +1,13 @@
 # 封面 + 内容图 统一视觉工作流
 
-> 先用 xhs-cover-skill 生成封面，再用 xhs-saas-content 生成内容图，
+> 先用内置 `cover/` 生成封面（有人物照时），再生成内容图，
 > 通过 `design-token.json` 自动保持全套图视觉统一。
 
 ## 快速开始
 
 ```bash
 # ① 生成封面（输出: cover.png + design-token.json）
-node ../xhs-cover-skill/scripts/generate.mjs \
+node cover/scripts/generate.mjs \
   --image ./me.jpg \
   --style hand-drawn-border \
   --title "三步搞定 AI 工作流" \
@@ -30,7 +30,7 @@ python3 scripts/shot.py \
 ## 工作原理
 
 ```
-xhs-cover-skill                      xhs-saas-content
+cover/（内置封面生成器）              内容图生成
 │                                     │
 │  选风格（如 hand-drawn-border）    │
 │  ↓                                 │
