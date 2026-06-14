@@ -1,6 +1,6 @@
 # 封面 + 内容图 统一视觉工作流
 
-> 先用内置 `cover/` 生成封面（有人物照时），再生成内容图，
+> 先用内置 `cover/` 生成封面（有人物照走真人风格，无人物照走插画风格），再生成内容图，
 > 通过 `design-token.json` 自动保持全套图视觉统一。
 
 ## 快速开始
@@ -12,6 +12,9 @@ node cover/scripts/generate.mjs \
   --style hand-drawn-border \
   --title "三步搞定 AI 工作流" \
   --output-dir ./xhs-output
+# 无人物照 → 插画封面（风格带 illustration:true，无需 --image）：
+# node cover/scripts/generate.mjs --style flat-blue-mascot \
+#   --title "三步搞定 AI 工作流" --subtitle "副标题" --output-dir ./xhs-output
 
 # ② 生成内容图（自动读取封面色彩）
 # —— LLM 文生图（风格 1/2）
