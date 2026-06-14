@@ -68,6 +68,12 @@ def norm(content):
     c.setdefault("collects", "0")
     c.setdefault("comments", 0)
     c.setdefault("images", [])
+    # 兼容：images 元素可为路径字符串，或 {"src"/"path", "generation_method"} 对象（封面 AI 生图硬门槛的审计字段）。
+    # 模拟器只需路径，这里归一化为字符串；磁盘上的 content.json 仍可保留对象形态与 generation_method。
+    c["images"] = [
+        ((im.get("src") or im.get("path") or "") if isinstance(im, dict) else im)
+        for im in c["images"]
+    ]
     c.setdefault("image_prompts", [])
     c.setdefault("gen", {"provider": "gemini", "model": "pro", "aspect": "9:16"})
     # prompts 补齐到与 images 等长

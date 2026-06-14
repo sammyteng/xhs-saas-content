@@ -19,7 +19,7 @@
 - 旧 8 种文案风格（A–H）的 persona 与 title_examples 去「科技黑话 / AI 腔」，改写成跨品类大白话。
 - **素材融合**：素材提取改为「融合成账号自己的内容直接讲」，禁止「看完这篇…」读后感 / 第三视角点评腔（见 `writing-deai.md`）。
 - `generate.mjs` 新增 `--no-open`（批量生成时不自动弹图预览）。
-- **封面默认走 AI 生图**：明确「系统有生图 key/能力时封面必走 AI 图（cover/ 或 gen_image），仅当没配任何生图 key 时才用 HTML 卡片封面」——避免有 key 时拿 HTML 卡片当封面偷懒。
+- **封面 AI 生图硬门槛**（实测会绕过 HTML 卡片，故收紧为强制）：封面首图必须来自 AI 生图（`cover/` / `gen_image.py` / Agent 自带生图存 PNG）；中文标题可用 HTML/CSS 叠字（`ai_composite`，底图仍是 AI）。**退 HTML 卡片封面须三条全满足**：已实检无任何生图能力 + `compliance.fallback_reason` 写明 + `images[0].generation_method=html_fallback`。🚫 禁止以「中文更稳 / 更快 / 更好看 / B2B 更适合」跳过 AI 生图。`content.json.images` 支持 `{src, generation_method}` 对象（模拟器自动兼容路径/对象两种形态）。
 
 ### 🔑 配置
 

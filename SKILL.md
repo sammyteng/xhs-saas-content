@@ -31,6 +31,7 @@ description: 通用小红书内容生成器：内容来源（知识库/直接给
 - [ ] **内容合规检测已通过**：P0（9 类红线）与 P1（8 类风险）均零命中，记入 `compliance`。
 - [ ] **无虚假体验**（P0-2）：第一人称未假装亲历、未编造身份战绩与效果数据。（AI 声明默认关闭 🔕，不要求 `ai_disclosure`。）
 - [ ] **封面 + 配图已真实生成（成品，非建议占位）**：`images` 已填 1-9 张真图。**封面：系统配了生图 key/能力时必须是 AI 生图（cover/ 或 gen_image），不得用 HTML 卡片偷懒；仅完全无 key 时才用 HTML 卡片封面**。逐张过 `image-styles.md` 负面清单（无霓虹/赛博/发光3D字、无畸形手指/塑料皮肤、无乱码伪文字、无厂商水印）。
+- [ ] **封面过 AI 生图硬门槛（机器可检）**：`images[0].generation_method` ∈ {`ai_cover`,`ai_generated`,`ai_composite`}；若为 `html_fallback`，必须同时存在 `compliance.fallback_reason`，且说明已实检所有生图能力/key 均不可用。
 - [ ] **图上文字合规复检通过**：配图内嵌文字过 P0-6（违禁词）/P0-2（虚假数据）/P1-2（模糊功效），记入 `compliance` 且 `location=image_text`。
 - [ ] `小红书模拟器.html` 能打开：**左图右文、单文件、图片已内嵌**（`grep data:image` 命中）、只读、断网也能看图。
 - [ ] 偏好已落盘：首次写了 profile（品牌 + 内容风格），二次运行能复用、未重复询问。
@@ -109,23 +110,28 @@ STEP 2a  ★内容合规检测（文本层）★：按 `styles/content-complianc
             （注：**P0-1 AIGC 标识当前默认关闭**，不要求带 AI 声明、`ai_disclosure` 可留空；详见 `styles/content-compliance.md`。）
           - **P1（8 类风险）**：命中任一 → 同样必须修改（软广特征/标题党/贬低竞品/无对比功效等）。
           - 检测结果写入 content.json 的 `compliance` 字段：
-            { "ai_disclosure": "...", "p0_passed": true/false, "p0_issues": [...], "p1_passed": true/false, "p1_issues": [...], "checked_at": "ISO时间" }
+            { "ai_disclosure": "...", "p0_passed": true/false, "p0_issues": [...], "p1_passed": true/false, "p1_issues": [...], "checked_at": "ISO时间", "fallback_reason": "（仅当封面退 HTML 卡片时填：已实检哪些生图能力均不可用；正常 AI 生图留空/省略）" }
             issues 元素：{ "rule": "P0-2", "text": "命中原文", "location": "title|body|tags|image_text", "fix": "建议改法" }（与 content-compliance.md 保持一致）。
           - P0 或 P1 未通过 → 回 STEP 1 重写相关部分，再重新检测，直到全部通过。
 STEP 3   ★生成封面 + 配图（成品必出图，照 STEP 1 文案做）★：先按正文规划 1-9 张图的 `image_prompts`（第 1 张作封面：大标题+副标题），再**按降级链逐张真出图**：
-          ⚙️ **封面默认必走 AI 生图**：系统配了生图 key/能力时，封面一律用 AI 图（cover/ 人物或插画封面、或 gen_image.py 设计封面）；**只有系统没配任何生图 key/能力时**才退 HTML 卡片做封面——别在有 key 时拿 HTML 卡片当封面偷懒。
+          ★★ AI 生图硬门槛（封面 · 强制，别再绕过）★★
+          - **封面首图必须来自 AI 生图**，不得直接用 HTML 卡片当首图封面。允许的封面生成方式只有 3 种：① `cover/` AI 封面生成器（人物照 / 插画风格）；② `scripts/gen_image.py` 调 AI 生图 provider；③ Agent 自带生图能力生成底图并存成本地 PNG。
+          - **中文标题可后期用 HTML/CSS 叠字保证零错字**（AI 出底图 → 叠标题，记为 `ai_composite`）；但**底图必须 AI 生成**，不许用纯 HTML 卡片当封面。
+          - **退回 HTML 卡片做封面，必须同时满足三条，缺一不可**：(a) 已实检所有生图能力均不可用——逐个查 env `OPENAI_API_KEY`/`GEMINI_API_KEY`/`ARK_API_KEY`/`DASHSCOPE_API_KEY`、`~/.config/xhs-cover/config.json` 的 chat-image key、以及 Agent 自身能否生图；(b) 在 `content.json.compliance.fallback_reason` 写明原因；(c) `content.json.images[0].generation_method` 标 `html_fallback`。
+          - 🚫 **禁止**因为「中文更稳 / 速度更快 / 卡片更好看 / B2B 更适合」直接跳过 AI 生图。
+          - 封面 `images[0].generation_method` 取值：`ai_cover`(cover/) / `ai_generated`(gen_image) / `ai_composite`(AI底图+HTML叠字) / `html_fallback`(仅 (a)(b)(c) 全满足)。
           ① 有生图能力/key（Agent 自带 或 配了 API key）→ AI 生图：
              - 封面：**先问/判断有没有人物照**（Agent 按内容/品类自动挑风格，用户给关键词/调性如"专业/暖/科技感"就映射到最近的，给确切 ID 就用，**不强制报 ID**）：
                · **有人物照** → `cover/` 出**人物封面**（22 种真人风格）：`node cover/scripts/generate.mjs --image 人物照 --style <风格ID> --title ...`。
                · **无人物照** → 优先 `cover/` 出**无真人插画封面**（6 种 `illustration:true` 风格：蓝吉祥物/暖生活/墨金/糖果/极简/手绘，**无需 `--image`**、中文准、有吉祥物或海报感）：`node cover/scripts/generate.mjs --style flat-blue-mascot --title ... --subtitle ...`；或用 `gen_image.py` 出纯设计封面（默认 image-2）。
                · 首次 `cd cover && npm install`；读 `~/.config/xhs-cover/config.json` 的 key；导出 `design-token.json`。（可问不卡：没回应就按"无人物照→插画封面"走。）
              - 内页：`python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "..." --design-token design-token.json --out imgN.png`，按 `image_prompts` 逐张。
-          ② 没 key/没生图能力 → **HTML 卡片出图**（playwright，免 key、中文零错字）：按 `image-styles.md` 卡片风格库写 HTML → `python3 scripts/shot.py --html card.html --out imgN.png --selector "#card" --w 1080 --h 1350`。封面与内页都可走这条。
+          ② 没 key/没生图能力 → **HTML 卡片出图**（playwright，免 key、中文零错字）：按 `image-styles.md` 卡片风格库写 HTML → `python3 scripts/shot.py --html card.html --out imgN.png --selector "#card" --w 1080 --h 1350`。**内页**可走这条；**封面走这条必须先过上方「AI 生图硬门槛」**（三条全满足 + 记 `html_fallback` + `fallback_reason`），否则封面必走 AI 生图。
           - **必出真图**：无论走①还是②，最终 `images` 都要填满真实图片路径——**不留空、不拿「配图建议」当交付**。
           - 逐张过 `image-styles.md` 负面清单（无霓虹/赛博/发光3D字、畸形手指/塑料皮肤、乱码伪文字、厂商水印）。封面联动 `design-token.json` → `cover-bridge.json` 让内页与封面同色调。
           - 配置/细节（provider/key/封面 skill/HTML 风格库）见文末「附 · 配图」。
 STEP 3a  ★图上文字合规复检★：抽出每张图内嵌的文字（标题/金句/数据/卖点），复用 `content-compliance.md` 的 **P0-6（违禁词/极限词）/ P0-2（虚假数据）/ P1-2（模糊功效）** 再扫一遍；命中 → 改提示词或 HTML 文案重出该图，直到通过；结果并入 `compliance`，`location` 用 `image_text`。
-STEP 4   写 content.json：整理标题、正文、标签、**`images`（真实图片路径，含封面）**、`image_prompts`、JTBD 分析、`source_mode`、合规结果（`compliance`；`ai_disclosure` 默认留空——P0-1 当前关闭）。
+STEP 4   写 content.json：整理标题、正文、标签、**`images`（含封面；每张为 `{src, generation_method}` 对象或纯路径字符串——封面 `images[0]` 必须带 `generation_method`）**、`image_prompts`、JTBD 分析、`source_mode`、合规结果（`compliance`；封面退 HTML 卡片时须加 `fallback_reason`；`ai_disclosure` 默认留空——P0-1 当前关闭）。
 STEP 5   构建小红书模拟器（左图右文、单文件、图片内嵌、只读）：
           - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器.html --embed`
           - 图位显示真图（断网也能看）。这是交付的预览文件。（兜底：万一某图缺失，图位会显示该位配图建议占位——但成品不应缺图。）
@@ -227,7 +233,8 @@ STEP 6   ★自检循环★：
   - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；实际文件名回填 `content.json` 的 `images[0]` 与 `cover`。
 - **无人物照 / 纯设计封面 → `gen_image.py`**（你的 images-API key，如 gpt-image-2）：
   `python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "封面设计，含中文标题…" --out cover.png`（gpt-image-2 中文标题基本能渲染对）。
-- **没任何 key → HTML 卡片当封面**：写卡片 HTML → `python3 scripts/shot.py`（中文零错字，见 image-styles.md 卡片风格库）。
+- **中文标题怕错字？用 `ai_composite`（AI 底图 + HTML 叠字，推荐）**：让 AI 出**纯底图/背景图**（提示词写「不要文字、给标题留出空白区」）→ 写一个 HTML 把这张 AI 图当背景、用 HTML/CSS 叠中文大标题 → `python3 scripts/shot.py --html cover.html --out cover.png --selector "#card" --w 1080 --h 1350`。底图来自 AI、文字零错字，`generation_method` 记 `ai_composite`。**这是「中文更稳」的正解，不是跳过 AI 生图的借口。**
+- **没任何 key（且已实检全不可用）→ HTML 卡片当封面**：写卡片 HTML → `python3 scripts/shot.py`（中文零错字，见 image-styles.md 卡片风格库）。**必须**同时记 `images[0].generation_method=html_fallback` + `compliance.fallback_reason`。
 
 **B · 内页配图**（照正文做，与封面同视觉）：
 - 加载封面的 `design-token.json`，经 `styles/cover-bridge.json` 映射配色。

@@ -23,8 +23,12 @@
   "likes": "9863",
   "collects": "5421",
   "comments": 218,
-  "images": [],
-  "_images_note": "成品应有图：实际产出时 images 填封面+配图真实路径（有 key 走 gen_image AI 图、无 key 走 HTML 卡片 shot.py）。本示例为省体积留空，仅展示字段格式。",
+  "images": [
+    { "src": "cover.png", "generation_method": "ai_cover" },
+    { "src": "img2.png", "generation_method": "ai_generated" },
+    { "src": "img3.png", "generation_method": "ai_generated" }
+  ],
+  "_images_note": "成品必出真图。images 每张为 {src, generation_method} 对象（也兼容纯路径字符串）。★封面 images[0].generation_method 必须 ∈ {ai_cover(cover/), ai_generated(gen_image), ai_composite(AI底图+HTML叠字)}——封面必走 AI 生图；仅当实检所有生图 key/能力均不可用时才可 html_fallback，并在 compliance.fallback_reason 写明原因。",
   "image_prompts": [
     "写实编辑风封面：阳光洒进的居家办公桌，木质桌面上一台笔记本显示会议记录界面，旁边一杯咖啡和写着字的笔记本，自然光、浅景深、生活气；角落叠一行干净扁平的中文小标题「会议纪要 交给 AI」。no neon, no glow, no 3D text, no cyberpunk, photorealistic, looks like a real photo",
     "扁平极简信息图，白底，竖版 4:5，低饱和最多 2 个点缀色，大留白，中文标题「速记盒用起来什么样」，三个数据：整理耗时 0 分钟 / 待办自动提取 / 错字仅 2 处，简单扁平线性图标。no neon, no glow, no 3D, flat magazine style",
@@ -56,6 +60,8 @@
     "p0_issues": [],
     "p1_passed": true,
     "p1_issues": [],
-    "checked_at": "2026-06-03T12:00:00Z"
-  }
+    "checked_at": "2026-06-03T12:00:00Z",
+    "fallback_reason": ""
+  },
+  "_compliance_note": "fallback_reason 仅当封面退回 HTML 卡片(images[0].generation_method=html_fallback)时必填，写明已实检哪些生图 key/能力均不可用；正常 AI 生图时留空。"
 }

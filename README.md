@@ -36,7 +36,7 @@ export OPENAI_API_KEY=你的key   # 可选；不配则走 HTML 卡片
 
 ## 配图（默认就出，降级链保证有图）
 
-**默认就出图（成品含图）**。**封面默认走 AI 生图**（有生图 key 必走 AI，不用 HTML 卡片偷懒）。降级链：① 有 key/生图能力 → AI 图（人物照封面走 `cover/`，需 `cd cover && npm install` + 自配 chat-image key；纯设计封面/内页走 `gen_image.py`，images-API key 如 gpt-image-2）② **没 key → HTML 卡片**（playwright，免 key、零错字）。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · 配图」。
+**默认就出图（成品含图）**。**封面默认走 AI 生图**（有生图 key 必走 AI，不用 HTML 卡片偷懒）。中文标题怕错字就用「AI 底图 + HTML 叠字」(`ai_composite`)。封面 `images[0].generation_method` 标 `ai_cover/ai_generated/ai_composite`；只有实检无任何生图 key 才允许 `html_fallback`（并写 `compliance.fallback_reason`）。降级链：① 有 key/生图能力 → AI 图（人物照封面走 `cover/`，需 `cd cover && npm install` + 自配 chat-image key；纯设计封面/内页走 `gen_image.py`，images-API key 如 gpt-image-2）② **没 key → HTML 卡片**（playwright，免 key、零错字）。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · 配图」。
 
 ## 怎么用
 
