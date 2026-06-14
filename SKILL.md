@@ -111,7 +111,7 @@ STEP 2a  ★内容合规检测（文本层）★：按 `styles/content-complianc
           - P0 或 P1 未通过 → 回 STEP 1 重写相关部分，再重新检测，直到全部通过。
 STEP 3   ★生成封面 + 配图（成品必出图，照 STEP 1 文案做）★：先按正文规划 1-9 张图的 `image_prompts`（第 1 张作封面：大标题+副标题），再**按降级链逐张真出图**：
           ① 有生图能力/key（Agent 自带 或 配了 API key）→ AI 生图：
-             - 封面：有人物照 → `cover/`（`node cover/scripts/generate.mjs --image 人物照 --style 风格ID --title ...`，首次 `cd cover && npm install`）；纯设计封面 → `gen_image.py`（默认 image-2）。导出 `design-token.json`。
+             - 封面：**先问/判断有没有人物照**——有 → `cover/` 出**人物封面**（`node cover/scripts/generate.mjs --image 人物照 --style 风格ID --title ...`，首次 `cd cover && npm install`；22 风格、最像真人博主，读 `~/.config/xhs-cover/config.json` 的 key）；没有/不提供 → `gen_image.py` 出**纯设计封面**（默认 image-2）。导出 `design-token.json`。（可问不卡：没回应就按"无人物照"走设计封面。）
              - 内页：`python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "..." --design-token design-token.json --out imgN.png`，按 `image_prompts` 逐张。
           ② 没 key/没生图能力 → **HTML 卡片出图**（playwright，免 key、中文零错字）：按 `image-styles.md` 卡片风格库写 HTML → `python3 scripts/shot.py --html card.html --out imgN.png --selector "#card" --w 1080 --h 1350`。封面与内页都可走这条。
           - **必出真图**：无论走①还是②，最终 `images` 都要填满真实图片路径——**不留空、不拿「配图建议」当交付**。
@@ -215,7 +215,7 @@ STEP 6   ★自检循环★：
 - **有人物照 → 内置封面生成器 `cover/`**（22 种人物封面风格，已并入本 skill）：
   `node cover/scripts/generate.mjs --image 人物照 --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" --output-dir 输出目录 --aspect-ratio 3:4`
   - 首次先装依赖：`cd cover && npm install`（装 sharp）。`--image` **必填**（这是人物封面生成器）；不带参数运行可列出 22 种风格。
-  - 需**配你自己的 key**：它走 chat/completions 返图——配 `XHS_COVER_API_KEY` + `--base-url` + `--model`（或写 `~/.config/xhs-cover/config.json`）。**仓库不含任何 key**。
+  - 需**它自己的 key**（仓库不含，用户自配）：读 `~/.config/xhs-cover/config.json`（`apiType`/`baseUrl`/`model`/`apiKey`，**可能已配好**），或用 `--api-key`/`--base-url`/`--model` 覆盖。⚠️ 它走**聊天返图**接口——支持 Google 原生（apiType:google）或任意 OpenAI 兼容的聊天返图模型（如 `gemini-3-pro-image`/`nano-banana-pro-preview`/`gpt-4o-image`）；**不是 images API**（gpt-image-2 那种它用不了）。别用 `--api-key` 覆盖掉已配好的 key（会冲突报错）。
   - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；实际文件名回填 `content.json` 的 `images[0]` 与 `cover`。
 - **无人物照 / 纯设计封面 → `gen_image.py`**（你的 images-API key，如 gpt-image-2）：
   `python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "封面设计，含中文标题…" --out cover.png`（gpt-image-2 中文标题基本能渲染对）。
