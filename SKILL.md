@@ -114,12 +114,15 @@ STEP 2a  ★内容合规检测（文本层）★：按 `styles/content-complianc
             issues 元素：{ "rule": "P0-2", "text": "命中原文", "location": "title|body|tags|image_text", "fix": "建议改法" }（与 content-compliance.md 保持一致）。
           - P0 或 P1 未通过 → 回 STEP 1 重写相关部分，再重新检测，直到全部通过。
 STEP 3   ★生成封面 + 配图（成品必出图，照 STEP 1 文案做）★：先按正文规划 1-9 张图的 `image_prompts`（第 1 张作封面：大标题+副标题），再**按降级链逐张真出图**：
-          ★★ AI 生图硬门槛（封面 · 强制，别再绕过）★★
-          - **封面首图必须来自 AI 生图**，不得直接用 HTML 卡片当首图封面。允许的封面生成方式只有 3 种：① `cover/` AI 封面生成器（人物照 / 插画风格）；② `scripts/gen_image.py` 调 AI 生图 provider；③ Agent 自带生图能力生成底图并存成本地 PNG。
-          - **中文标题可后期用 HTML/CSS 叠字保证零错字**（AI 出底图 → 叠标题，记为 `ai_composite`）；但**底图必须 AI 生成**，不许用纯 HTML 卡片当封面。
+          ★★ AI 生图硬门槛（封面 · 强制）★★
+          - **封面首图必须来自 AI 生图，且优先直接出「含中文标题」的完整封面**（别一上来就拆成底图+叠字）。按优先级选第一个可用的：
+            ① **首选 `cover/` AI 封面生成器**——28 风格、一次出含标题的成品图，中文渲染已验证可靠（图2 与 28 张样张为证），是本 skill 的封面主力，**别绕过它**；
+            ② `scripts/gen_image.py` 调 AI 生图 provider（gpt-image-2 / gemini 等，提示词里带上中文标题，直接出含字封面）；
+            ③ Agent 自带生图能力出含标题底图并存 PNG。
+          - **`ai_composite`（AI 无字底图 + HTML/CSS 叠中文）只是「文字补救」、不是默认**：仅当 ①②③ 出来的中文标题**确实乱码/缺笔画**时才改用它。**不要默认拆成底图+叠字而跳过 cover/**——cover/ 与 gen_image 的中文通常没问题，先直接出含字封面，真乱了再补救。
           - **退回 HTML 卡片做封面，必须同时满足三条，缺一不可**：(a) 已实检所有生图能力均不可用——逐个查 env `OPENAI_API_KEY`/`GEMINI_API_KEY`/`ARK_API_KEY`/`DASHSCOPE_API_KEY`、`~/.config/xhs-cover/config.json` 的 chat-image key、以及 Agent 自身能否生图；(b) 在 `content.json.compliance.fallback_reason` 写明原因；(c) `content.json.images[0].generation_method` 标 `html_fallback`。
-          - 🚫 **禁止**因为「中文更稳 / 速度更快 / 卡片更好看 / B2B 更适合」直接跳过 AI 生图。
-          - 封面 `images[0].generation_method` 取值：`ai_cover`(cover/) / `ai_generated`(gen_image) / `ai_composite`(AI底图+HTML叠字) / `html_fallback`(仅 (a)(b)(c) 全满足)。
+          - 🚫 **禁止**：① 因「中文更稳 / 速度更快 / 卡片更好看 / B2B 更适合」跳过 AI 生图；② 在 `cover/` 可用时拿 `ai_composite` 或 HTML 卡片绕过它。
+          - 封面 `images[0].generation_method` 取值：`ai_cover`(cover/，**默认首选**) / `ai_generated`(gen_image) / `ai_composite`(仅文字补救) / `html_fallback`(仅 (a)(b)(c) 全满足)。
           ① 有生图能力/key（Agent 自带 或 配了 API key）→ AI 生图：
              - 封面：**先问/判断有没有人物照**（Agent 按内容/品类自动挑风格，用户给关键词/调性如"专业/暖/科技感"就映射到最近的，给确切 ID 就用，**不强制报 ID**）：
                · **有人物照** → `cover/` 出**人物封面**（22 种真人风格）：`node cover/scripts/generate.mjs --image 人物照 --style <风格ID> --title ...`。
@@ -233,7 +236,7 @@ STEP 6   ★自检循环★：
   - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；实际文件名回填 `content.json` 的 `images[0]` 与 `cover`。
 - **无人物照 / 纯设计封面 → `gen_image.py`**（你的 images-API key，如 gpt-image-2）：
   `python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "封面设计，含中文标题…" --out cover.png`（gpt-image-2 中文标题基本能渲染对）。
-- **中文标题怕错字？用 `ai_composite`（AI 底图 + HTML 叠字，推荐）**：让 AI 出**纯底图/背景图**（提示词写「不要文字、给标题留出空白区」）→ 写一个 HTML 把这张 AI 图当背景、用 HTML/CSS 叠中文大标题 → `python3 scripts/shot.py --html cover.html --out cover.png --selector "#card" --w 1080 --h 1350`。底图来自 AI、文字零错字，`generation_method` 记 `ai_composite`。**这是「中文更稳」的正解，不是跳过 AI 生图的借口。**
+- **`ai_composite`（AI 底图 + HTML 叠字）= 文字补救，仅在 cover/ 或 gen_image 出的中文乱码时才用**：让 AI 出**纯底图/背景图**（提示词写「不要文字、给标题留出空白区」）→ 写 HTML 把这张 AI 图当背景、HTML/CSS 叠中文大标题 → `python3 scripts/shot.py --html cover.html --out cover.png --selector "#card" --w 1080 --h 1350`，`generation_method` 记 `ai_composite`。⚠️ **别拿它当默认绕过 cover/**——cover/ 一次就能出含中文标题的完整封面（中文已验证可靠）。
 - **没任何 key（且已实检全不可用）→ HTML 卡片当封面**：写卡片 HTML → `python3 scripts/shot.py`（中文零错字，见 image-styles.md 卡片风格库）。**必须**同时记 `images[0].generation_method=html_fallback` + `compliance.fallback_reason`。
 
 **B · 内页配图**（照正文做，与封面同视觉）：
