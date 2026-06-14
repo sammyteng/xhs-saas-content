@@ -2,7 +2,7 @@
 
 为 SaaS / 软件 / AI 工具一键产出**可直接发小红书的完整图文成品**：第一人称长文（3 候选标题+标签）+ **封面与 1-9 张配图** + 一个**左图右文、单文件、只读的发布模拟器**。含**内容合规检测**（P0 红线 + P1 风险）。
 
-> ⚙️ **默认产出含图成品**：有 key/生图能力用 AI 图，没 key 用 HTML 卡片出图（免 key、中文零错字）——任何环境都出真图。可问偏好但不卡流程。**仓库不含任何 key（用户自配）**。
+> ⚙️ **默认产出含图成品**：**封面默认走 AI 生图**（有 key/生图能力就用 AI 图），没配任何生图 key 才退 HTML 卡片（免 key、中文零错字）——任何环境都出真图。可问偏好但不卡流程。**仓库不含任何 key（用户自配）**。
 
 ## 它能干嘛
 
@@ -36,7 +36,7 @@ export OPENAI_API_KEY=你的key   # 可选；不配则走 HTML 卡片
 
 ## 配图（默认就出，降级链保证有图）
 
-**默认就出图（成品含图）**。降级链：① 有 key/生图能力 → AI 图（人物照封面走 `cover/`，需 `cd cover && npm install` + 自配 chat-image key；纯设计封面/内页走 `gen_image.py`，images-API key 如 gpt-image-2）② **没 key → HTML 卡片**（playwright，免 key、零错字）。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · 配图」。
+**默认就出图（成品含图）**。**封面默认走 AI 生图**（有生图 key 必走 AI，不用 HTML 卡片偷懒）。降级链：① 有 key/生图能力 → AI 图（人物照封面走 `cover/`，需 `cd cover && npm install` + 自配 chat-image key；纯设计封面/内页走 `gen_image.py`，images-API key 如 gpt-image-2）② **没 key → HTML 卡片**（playwright，免 key、零错字）。**仓库不含任何 key（用户自配）**。完整步骤见 SKILL.md 文末「附 · 配图」。
 
 ## 怎么用
 
