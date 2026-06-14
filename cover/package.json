@@ -1,0 +1,27 @@
+{
+  "name": "xhs-ai-cover-skill",
+  "version": "1.0.0",
+  "description": "小红书AI生图封面skill - 一键生成符合小红书比例的爆款封面图，支持 22 种风格，支持独立 API Key 或 Codex 环境",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs"
+  },
+  "author": "sammyteng",
+  "license": "MIT",
+  "keywords": [
+    "xiaohongshu",
+    "xhs",
+    "cover",
+    "codex",
+    "claude-code",
+    "skill",
+    "gpt-image",
+    "gemini"
+  ]
+}

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-从 content.json 生成「小红书发布模拟器」HTML。两种产物：
+从 content.json 生成「小红书发布模拟器」HTML（左图右文结构）。
 
-  # 编辑版（配合 serve.py：可改文案 / 单图重生成 / 换图）
-  python3 build_simulator.py --content content.json --out 小红书模拟器.html
+  # 交付版（默认）：图片 base64 内嵌的单文件、只读预览，发给别人不丢图
+  python3 build_simulator.py --content content.json --out 小红书模拟器.html --embed
 
-  # 分享版（图片 base64 内嵌成单文件，发给别人不丢图，只读预览）
-  python3 build_simulator.py --content content.json --out 小红书模拟器_分享版.html --embed
+  # 可选·编辑版（不加 --embed，配合 serve.py 可改文案/重生成/换图；当前默认不交付）
+  python3 build_simulator.py --content content.json --out 小红书模拟器_编辑版.html
 
 content.json 字段（均可选，缺省有默认值）：
 {
@@ -23,8 +23,20 @@ content.json 字段（均可选，缺省有默认值）：
 """
 import os, json, argparse, base64, mimetypes
 
-# ---- cover-bridge.json 路径（相对于本脚本） ----
-BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "styles", "cover-bridge.json")
+def js_safe(obj):
+    """把 Python 对象序列化成可安全嵌入 <script> 块的 JSON 字符串。
+
+    json.dumps 本身不转义 </script>，正文若含 </script><script> 会越出脚本块导致
+    脚本注入；U+2028 / U+2029 在 JS 字符串里是非法换行也会报错。这里做三件事，
+    保证数据能无损 round-trip（JSON.parse 时浏览器会把 <\\/ 还原为 </）：
+      1. 把子串 </（小于号+斜杠）替换成 <\\/（小于号+反斜杠+斜杠）
+      2. U+2028 → \\u2028
+      3. U+2029 → \\u2029
+    """
+    s = json.dumps(obj, ensure_ascii=False)
+    s = s.replace("</", "<\\/")
+    s = s.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    return s
 
 def load_design_token(token_path):
     """读取 design-token.json，返回 designToken 字典（或 None）。"""
@@ -34,14 +46,11 @@ def load_design_token(token_path):
         data = json.load(f)
     return data.get("designToken", data)
 
-def load_bridge():
-    """加载 cover-bridge.json 映射表。"""
-    if not os.path.exists(BRIDGE_PATH):
-        return None
-    with open(BRIDGE_PATH, encoding="utf-8") as f:
-        return json.load(f)
-
 def norm(content):
+    # 说明：content.json 里的 source_mode / product_analysis / compliance 属于
+    # 元数据/分析字段（内容来源、JTBD 提炼、合规检测结果），**刻意不进发布预览**
+    # （WYSIWYG：模拟器只渲染真正会发到小红书的部分）。它们原样保留在 content 里，
+    # 随 collect()/导出一并带出，但不在模拟器界面上呈现。
     c = dict(content)
     if not c.get("titles"):
         t = c.get("title")
@@ -144,6 +153,12 @@ HTML = r"""<!DOCTYPE html>
   .ic .e{font-size:19px;}
   .stat{width:100%;font-size:12.5px;color:#0071e3;}
   .hint{font-size:11.5px;color:#8a8a93;}
+  .needserv{font-size:11px;color:#8a8a93;line-height:1.5;}
+  /* 无配图模式：图位展示「配图建议」占位（深底浅字，贴合 .media 暗背景） */
+  .ph{padding:44px 36px;overflow-y:auto;max-height:100%;color:#e8e8ef;}
+  .pht{font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;line-height:1.5;}
+  .phi{font-size:13.5px;color:#c9c9d4;line-height:1.7;padding:11px 14px;margin-bottom:10px;background:#16161c;border-radius:10px;border-left:3px solid #3a3a44;}
+  .phi b{color:#fff;}
 </style>
 </head>
 <body>
@@ -169,6 +184,7 @@ HTML = r"""<!DOCTYPE html>
           <button class="btn g" onclick="document.getElementById('fileup').click()">上传换图</button>
           <input type="file" id="fileup" accept="image/*" style="display:none" onchange="if(this.files[0])upload(this.files[0])">
         </div>
+        <div class="needserv" id="needserv">改图需先启动本地服务：python3 scripts/serve.py &lt;输出目录&gt;</div>
       </div>
     </div>
     <div class="panel">
@@ -209,7 +225,7 @@ function bust(n){ return SRC[n] ? srcOf(n) : srcOf(n)+'?t='+Date.now(); }
 
 function renderHead(){
   $('modehint').innerHTML = SHARE
-    ? '只读分享版 · 图片已内嵌单文件 · 左屏翻图（← →）· 右屏看完整内容'
+    ? '只读分享版 · 图片已内嵌单文件 · 左图右文 · ← → 翻图'
     : '左屏：单图可改提示词重生成/换图 · 右屏：点标题切换、点正文/标签直接改 · 满意后可点「确认内容」导出';
   $('av').textContent = DATA.avatar || 'AI';
   $('nm').textContent = DATA.author || '';
@@ -222,14 +238,19 @@ function renderHead(){
   $('asp').value  = (DATA.gen&&DATA.gen.aspect) || '9:16';
 }
 
-/* ---- 标题（3 候选 + 20 字符限制） ---- */
+/* ---- 标题（编辑版：3 候选可点；分享版：只显示选中那条标题，候选/计数器全隐藏） ---- */
 function renderTitles(){
-  const chips = $('chips'); chips.innerHTML='';
+  const chips = $('chips');
+  if(SHARE){
+    // 分享版不显示候选 chip——选中的标题已经在 titlebar 上，且不可点
+    chips.style.display='none'; chips.innerHTML='';
+    return;
+  }
+  chips.innerHTML='';
   (DATA.titles||[]).forEach((t,i)=>{
     const c=document.createElement('span'); c.className='chip'+(i===titleIdx?' on':''); c.textContent=t;
     c.onclick=()=>setTitle(i); chips.appendChild(c);
   });
-  if(SHARE) chips.style.display = (DATA.titles||[]).length>1 ? 'flex':'none';
 }
 function setTitle(i){
   titleIdx=i; const t=(DATA.titles||[])[i]||'';
@@ -237,18 +258,21 @@ function setTitle(i){
   [...$('chips').children].forEach((c,k)=>c.classList.toggle('on',k===i));
 }
 function updateCnt(){
+  if(SHARE) return;   // 分享版不显示字数计数器（只给编辑者看）
   const len=[...($('titlebar').textContent||'')].length;
   const e=$('cnt'); e.textContent='标题 '+len+' / '+TITLE_MAX+' 字符'+(len>TITLE_MAX?'（超出，小红书会截断）':'');
   e.classList.toggle('over', len>TITLE_MAX);
 }
 
 /* ---- 正文（高亮 + 可编辑） ---- */
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function renderBody(){
   const el=$('ntext'); const body=DATA.body||''; const h=DATA.highlight;
-  el.textContent=body;
-  if(h && body.indexOf(h)>=0 && !SHARE===false){ /* keep plain for edit */ }
+  el.textContent=body;   // 兜底：无高亮（或高亮不命中）时保留纯文本，不走 innerHTML
   if(h && body.indexOf(h)>=0){
-    el.innerHTML = body.split(h).join('<span class="b">'+h.replace(/[&<>]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))+'</span>');
+    // 先整段转义，再用「转义后的高亮串」做 split/join，避免正文里的尖括号 / img onerror 被当 HTML 执行
+    const eh=esc(h);
+    el.innerHTML = esc(body).split(eh).join('<span class="b">'+eh+'</span>');
   }
 }
 
@@ -260,6 +284,7 @@ function renderRail(){
   });
 }
 function set(i){
+  if(!$('bigimg')) return;   // 无配图模式下图位已被「配图建议」占位替换
   const n=(DATA.images||[]).length||1; cur=((i%n)+n)%n;
   const name=(DATA.images||[])[cur];
   if(name) $('bigimg').src=bust(name);
@@ -270,9 +295,29 @@ function set(i){
 }
 function go(d){ set(cur+d); }
 
+/* ---- 无配图模式：把 image_prompts 当「配图建议」展示在图位 ---- */
+function renderPlaceholder(){
+  const ps = DATA.image_prompts || [];
+  const sb = document.querySelector('.stagebox');
+  sb.innerHTML = '<div class="ph"><div class="pht">配图建议（本篇未生成图，按下方提示自行配图即可）</div>'
+    + (ps.length
+        ? ps.map((p,i)=>'<div class="phi"><b>图 '+(i+1)+'</b>　'+esc(p||'（待补提示词）')+'</div>').join('')
+        : '<div class="phi">content.json 未提供 image_prompts；可在正文里规划要配几张图。</div>')
+    + '</div>';
+  const rail=$('rail'); if(rail) rail.style.display='none';
+  const it=$('imgtools'); if(it) it.style.display='none';
+}
+
 /* ---- 单图重生成 / 上传 ---- */
+const NEED_SERVER_MSG =
+  '「重新生成此图 / 上传换图」需要本地服务支持，直接双击打开 HTML 无法落盘。\n\n'
+  +'请先在终端启动本地服务（把 <输出目录> 换成本 HTML 所在的目录）：\n\n'
+  +'  python3 scripts/serve.py <输出目录>\n\n'
+  +'例如输出目录是 ./xhs-output，就执行：\n'
+  +'  python3 scripts/serve.py ./xhs-output\n\n'
+  +'启动后用它打印的 http://localhost 地址打开本页面，再点此按钮即可改图。';
 async function regen(){
-  if(!SERVED){ alert('重新生成需要后端：\n在该目录执行  python3 scripts/serve.py  后用浏览器打开。'); return; }
+  if(!SERVED){ alert(NEED_SERVER_MSG); return; }
   const b={index:cur, prompt:$('promptbox').value, provider:$('prov').value, model:(DATA.gen&&DATA.gen.model)||'', aspect:$('asp').value};
   const btn=$('btnregen'); btn.disabled=true; const old=btn.textContent; btn.textContent='生成中…';
   try{
@@ -299,8 +344,12 @@ function upload(file){
 }
 
 /* ---- 确认内容（建议操作，自动化可跳过） → 保存 JSON ---- */
+const TAG_MAX = 10;
 function parseTags(){
-  return (($('tags').innerText)||'').split(/[#\s,，、]+/).map(s=>s.trim()).filter(Boolean);
+  const raw=(($('tags').innerText)||'').split(/[#\s,，、]+/).map(s=>s.trim()).filter(Boolean);
+  const seen=new Set(); const out=[];
+  for(const t of raw){ if(!seen.has(t)){ seen.add(t); out.push(t); } }   // 去重（保序）
+  return out.slice(0, TAG_MAX);                                          // 数量上限
 }
 function collect(){
   return Object.assign({}, DATA, {
@@ -331,10 +380,17 @@ function stat(m){ $('stat').textContent=m; }
 
 /* ---- init ---- */
 function init(){
-  renderHead(); renderTitles(); setTitle(0); renderBody(); renderRail(); set(0);
+  // 选中默认标题：优先用 content 里记录的 titleIndex，否则第一条
+  const startIdx = (Number.isInteger(DATA.titleIndex) && DATA.titleIndex>=0
+                    && DATA.titleIndex < (DATA.titles||[]).length) ? DATA.titleIndex : 0;
+  renderHead(); renderTitles(); setTitle(startIdx); renderBody();
+  const noImg = (DATA.images||[]).length === 0;
+  if(noImg){ renderPlaceholder(); } else { renderRail(); set(0); }
   if(SHARE){
-    $('imgtools').style.display='none';
+    // 分享版：左右结构 + 只读（隐藏所有「只给编辑者看」的部件）
+    $('imgtools').style.display='none';      // 改图/换图/提示词工具
     $('btnconfirm').style.display='none';
+    $('cnt').style.display='none';           // 标题字数计数器
     $('titlebar').classList.remove('edit');
     $('ntext').classList.remove('edit');
   } else {
@@ -342,7 +398,8 @@ function init(){
     $('titlebar').addEventListener('input',updateCnt);
     $('ntext').classList.add('edit'); $('ntext').contentEditable=true;
     $('tags').classList.add('edit'); $('tags').contentEditable=true;
-    if(!SERVED){ $('btnregen').title='需 serve.py 后端'; }
+    if(SERVED){ $('needserv').style.display='none'; }   // 已起本地服务则隐藏常驻提示
+    else { $('btnregen').title='需 serve.py 后端'; }
   }
   document.addEventListener('keydown',e=>{
     if(e.target.isContentEditable||e.target.tagName==='TEXTAREA') return;
@@ -400,8 +457,8 @@ def main():
             token_info_html = ' · '.join(parts)
 
     html = (HTML
-            .replace("__DATA__", json.dumps(content, ensure_ascii=False))
-            .replace("__SRC__", json.dumps(src, ensure_ascii=False))
+            .replace("__DATA__", js_safe(content))
+            .replace("__SRC__", js_safe(src))
             .replace("__SHARE__", "true" if args.embed else "false"))
 
     # 注入 design token 样式（在 </head> 前）和封面信息（在 modehint 后）

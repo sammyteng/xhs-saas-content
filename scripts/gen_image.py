@@ -33,7 +33,9 @@
 
 各 provider 的模型别名见下方 MODELS。
 """
-import os, sys, argparse, base64, urllib.request, json
+from __future__ import annotations
+
+import os, sys, argparse, base64, time, urllib.request, urllib.error, json
 
 # ---- 模型别名（截至 2026-06，API 可用的最新版）----
 GEMINI_MODELS = {
@@ -41,9 +43,56 @@ GEMINI_MODELS = {
     "pro": "gemini-3-pro-image",         # Nano Banana Pro，质量最高、中文最准（默认）
     "preview": "gemini-3-pro-image-preview",
 }
-OPENAI_DEFAULT = "gpt-image-1.5"         # 当前默认；可换 gpt-image-2 / gpt-image-1-mini
+OPENAI_DEFAULT = "gpt-image-2"           # image-2 = OpenAI GPT Image 2（默认）；可用环境变量 OPENAI_IMAGE_MODEL 覆盖
+# OpenAI 默认模型支持环境变量覆盖（缺省回退到上面的默认值）
+OPENAI_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", OPENAI_DEFAULT)
 ARK_DEFAULT = "doubao-seedream-4-0-250828"   # Seedream 4.0（支持 4K、多图参考）
 DASHSCOPE_DEFAULT = "wan2.2-t2i-plus"    # 通义万相 2.2（ImageSynthesis 同步/异步均支持）
+
+# ---- 网络超时（秒） ----
+HTTP_DOWNLOAD_TIMEOUT = 60     # save_url 下载图片
+OPENAI_CLIENT_TIMEOUT = 120    # OpenAI / ARK client
+DASHSCOPE_TIMEOUT = 120        # DashScope ImageSynthesis 调用
+
+# ---- 网络异常统一重试包装 ----
+def _is_retryable_error(e: Exception) -> bool:
+    """判定异常是否可重试：连接/读超时、5xx、429 可重试；4xx（含安全过滤）等不可重试。"""
+    # 连接 / 读取超时类
+    if isinstance(e, (TimeoutError, urllib.error.URLError)):
+        # URLError 含 socket.timeout / 连接拒绝等，均视为可重试
+        if isinstance(e, urllib.error.HTTPError):
+            return e.code == 429 or 500 <= e.code < 600
+        return True
+    # HTTPError 直接命中
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code == 429 or 500 <= e.code < 600
+    # 第三方 SDK 异常：靠 status_code / 文本特征判断
+    status = getattr(e, "status_code", None) or getattr(e, "status", None) or getattr(e, "code", None)
+    if isinstance(status, int):
+        return status == 429 or 500 <= status < 600
+    text = str(e).lower()
+    if any(s in text for s in ("timed out", "timeout", "connection", "temporarily", "503", "502", "504", "429")):
+        return True
+    # 安全过滤 / 4xx 等不可重试
+    return False
+
+def with_retries(fn, *, what: str, attempts: int = 3):
+    """统一网络重试：最多 attempts 次，指数退避；不可重试错误立即抛出。
+
+    attempts=3 即首次 + 2 次重试，退避 1s / 2s。
+    """
+    last = None
+    for i in range(attempts):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001 — 由 _is_retryable_error 精细分流
+            last = e
+            if i == attempts - 1 or not _is_retryable_error(e):
+                raise
+            delay = 2 ** i
+            print(f"[retry] {what} 第 {i + 1} 次失败（{e}），{delay}s 后重试", file=sys.stderr)
+            time.sleep(delay)
+    raise last  # 理论不可达
 
 # ---- cover-bridge.json 路径（相对于本脚本） ----
 BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "styles", "cover-bridge.json")
@@ -65,13 +114,26 @@ def load_bridge():
         return json.load(f)
 
 def apply_design_token_to_prompt(prompt, token, bridge):
-    """根据 designToken + bridge 映射，给 prompt 追加色彩/风格提示词，返回 (new_prompt, extra_negative)。"""
+    """根据 designToken + bridge 映射，给 prompt 追加色彩/风格提示词。
+
+    返回 (new_prompt, extra_negative)：
+      - new_prompt 只含【正向】增强（绝不把负向词拼进来）；
+      - extra_negative 是独立的负向字符串，交由调用方按 provider 分流处理。
+    """
     if not token or not bridge:
         return prompt, ""
 
     bg_tone = token.get("bgTone", "light")
     primary_color = token.get("primaryColor", "")
-    mapping = bridge.get("bgTone_mappings", {}).get(bg_tone)
+    mappings = bridge.get("bgTone_mappings", {})
+    mapping = mappings.get(bg_tone)
+    # 修4：未知 bgTone 不再静默丢弃 —— 打 WARN 并回退 light 档（.get 安全取，避免 KeyError）
+    if mapping is None:
+        print(
+            f"[design-token] WARN: 未知 bgTone='{bg_tone}'，cover-bridge.json 无对应映射，已回退到 light 档",
+            file=sys.stderr,
+        )
+        mapping = mappings.get("light")
 
     extra_positive = ""
     if mapping:
@@ -86,12 +148,21 @@ def apply_design_token_to_prompt(prompt, token, bridge):
     elif isinstance(neg_hints, str) and neg_hints:
         extra_negative = neg_hints
 
+    # 修1：仅拼接【正向】增强，负向词独立返回，不得混入正向 prompt
     if extra_positive:
         prompt = f"{prompt}\n{extra_positive}"
-    if extra_negative:
-        prompt = f"{prompt}\n{extra_negative}"
 
     return prompt, extra_negative
+
+def merge_negative_into_prompt(prompt, negative):
+    """给无原生负向能力的 provider（gemini/openai）用：把负向词以明确否定句式并入正向 prompt 末尾。
+
+    不裸拼名词，而是用英文否定句式（avoid: ..., no ...）显式表达「不要什么」。
+    """
+    neg = (negative or "").strip().strip(",").strip()
+    if not neg:
+        return prompt
+    return f"{prompt}\nAvoid the following: {neg}. No {neg}."
 
 # ---- aspect -> 各家支持的 size 字符串 ----
 def aspect_to_size(provider, aspect):
@@ -114,7 +185,12 @@ def save_bytes(out, data):
         f.write(data)
 
 def save_url(out, url):
-    save_bytes(out, urllib.request.urlopen(url).read())
+    # 修2：下载加超时 + 网络异常重试，避免无限挂起
+    data = with_retries(
+        lambda: urllib.request.urlopen(url, timeout=HTTP_DOWNLOAD_TIMEOUT).read(),
+        what="下载生成图片",
+    )
+    save_bytes(out, data)
 
 # ---------------- Gemini ----------------
 def gen_gemini(args):
@@ -129,7 +205,9 @@ def gen_gemini(args):
     client = genai.Client(api_key=key)
     model_id = GEMINI_MODELS.get(args.model, args.model or GEMINI_MODELS["pro"])
 
-    parts = [args.prompt]
+    # gemini 无原生 negative_prompt，将负向词以否定句式并入正向 prompt
+    prompt_text = merge_negative_into_prompt(args.prompt, getattr(args, "negative", ""))
+    parts = [prompt_text]
     for rp in args.ref:
         with open(rp, "rb") as f:
             data = f.read()
@@ -150,9 +228,13 @@ def gen_gemini(args):
                 response_modalities=["TEXT", "IMAGE"], image_config=cfg),
         )
     try:
-        resp = call(img_cfg)
+        resp = with_retries(lambda: call(img_cfg), what="Gemini 生图")
     except Exception:
-        resp = call(types.ImageConfig(aspect_ratio=args.aspect))
+        # 回退到无 size 的最小配置，同样带超时重试
+        resp = with_retries(
+            lambda: call(types.ImageConfig(aspect_ratio=args.aspect)),
+            what="Gemini 生图(回退配置)",
+        )
 
     for part in resp.candidates[0].content.parts:
         if getattr(part, "inline_data", None) and part.inline_data.data:
@@ -169,13 +251,32 @@ def gen_openai(args):
         from openai import OpenAI
     except ImportError:
         sys.exit("ERROR: 缺依赖，请 `pip install openai`")
-    kwargs = {"api_key": key}
+    kwargs = {"api_key": key, "timeout": OPENAI_CLIENT_TIMEOUT}
     if args.base_url:
         kwargs["base_url"] = args.base_url
     client = OpenAI(**kwargs)
-    model_id = args.model or OPENAI_DEFAULT
+    # 修3：默认模型支持 OPENAI_IMAGE_MODEL 覆盖，缺省回退到 OPENAI_DEFAULT
+    model_id = args.model or OPENAI_MODEL
+    # openai 无原生 negative_prompt，将负向词以否定句式并入正向 prompt
+    prompt_text = merge_negative_into_prompt(args.prompt, getattr(args, "negative", ""))
     size = aspect_to_size("openai", args.aspect)
-    resp = client.images.generate(model=model_id, prompt=args.prompt, size=size, n=1)
+    try:
+        resp = with_retries(
+            lambda: client.images.generate(model=model_id, prompt=prompt_text, size=size, n=1),
+            what="OpenAI 生图",
+        )
+    except Exception as e:
+        # 修3：模型不可用 / 400 类错误给中文提示
+        status = getattr(e, "status_code", None) or getattr(e, "status", None)
+        text = str(e).lower()
+        model_err = "model" in text and ("not" in text or "exist" in text or "invalid" in text)
+        if status == 400 or model_err:
+            sys.exit(
+                f"ERROR: OpenAI 模型 '{model_id}' 不可用或不存在。"
+                "建议用 --model 指定可用模型、改用其他 provider（gemini/ark/dashscope），"
+                f"或退回 HTML 兜底（shot.py）。原始报错：{e}"
+            )
+        raise
     d = resp.data[0]
     if getattr(d, "b64_json", None):
         save_bytes(args.out, base64.b64decode(d.b64_json))
@@ -194,10 +295,22 @@ def gen_ark(args):
         from volcenginesdkarkruntime import Ark
     except ImportError:
         sys.exit("ERROR: 缺依赖，请 `pip install 'volcengine-python-sdk[ark]'`")
-    client = Ark(api_key=key)
+    client = Ark(api_key=key, timeout=OPENAI_CLIENT_TIMEOUT)
     model_id = args.model or ARK_DEFAULT
     size = aspect_to_size("ark", args.aspect)
-    resp = client.images.generate(model=model_id, prompt=args.prompt, size=size, response_format="url")
+    negative = (getattr(args, "negative", "") or "").strip().strip(",").strip()
+
+    def _call(with_negative: bool):
+        gen_kwargs = {"model": model_id, "prompt": args.prompt, "size": size, "response_format": "url"}
+        if with_negative and negative:
+            gen_kwargs["negative_prompt"] = negative  # Seedream 若 SDK 支持则原生传入
+        return client.images.generate(**gen_kwargs)
+
+    try:
+        resp = with_retries(lambda: _call(with_negative=True), what="ARK/Seedream 生图")
+    except TypeError:
+        # SDK 不接受 negative_prompt 参数，回退到无负向调用
+        resp = with_retries(lambda: _call(with_negative=False), what="ARK/Seedream 生图(无负向)")
     d = resp.data[0]
     if getattr(d, "b64_json", None):
         save_bytes(args.out, base64.b64decode(d.b64_json))
@@ -218,7 +331,25 @@ def gen_dashscope(args):
         sys.exit("ERROR: 缺依赖，请 `pip install dashscope`")
     model_id = args.model or DASHSCOPE_DEFAULT
     size = aspect_to_size("dashscope", args.aspect)
-    rsp = ImageSynthesis.call(api_key=key, model=model_id, prompt=args.prompt, n=1, size=size)
+    negative = (getattr(args, "negative", "") or "").strip().strip(",").strip()
+
+    call_kwargs = {"api_key": key, "model": model_id, "prompt": args.prompt, "n": 1, "size": size}
+    if negative:
+        call_kwargs["negative_prompt"] = negative  # DashScope 原生支持负向提示词
+    # 修2：网络调用加超时 + 重试（部分 SDK 版本支持 read_timeout/connect_timeout）
+    try:
+        rsp = with_retries(
+            lambda: ImageSynthesis.call(
+                **call_kwargs, read_timeout=DASHSCOPE_TIMEOUT, connect_timeout=DASHSCOPE_TIMEOUT
+            ),
+            what="DashScope/通义万相 生图",
+        )
+    except TypeError:
+        # 老版本 SDK 不接受 timeout 参数，回退到无显式超时调用（仍带重试）
+        rsp = with_retries(
+            lambda: ImageSynthesis.call(**call_kwargs),
+            what="DashScope/通义万相 生图(无超时参数)",
+        )
     if rsp.status_code != 200:
         sys.exit(f"ERROR: DashScope {rsp.status_code} {getattr(rsp,'message','')}")
     save_url(args.out, rsp.output.results[0].url)
@@ -236,8 +367,8 @@ DISPATCH = {
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--provider", default="gemini",
-                    help="gemini | openai | ark(豆包/即梦) | dashscope(通义万相)")
+    ap.add_argument("--provider", default="openai",
+                    help="默认 openai（image-2 = gpt-image-2）| gemini(中文最准) | ark(豆包/即梦) | dashscope(通义万相)")
     ap.add_argument("--prompt", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--model", default=None, help="模型名/别名，留空用该 provider 默认")
@@ -250,11 +381,20 @@ def main():
     args = ap.parse_args()
 
     # ---- 若提供了 design token，注入色彩/风格提示词 ----
+    args.negative = ""  # 负向提示词：默认空，由各 provider 按能力分流处理
     token = load_design_token(args.design_token)
     bridge = load_bridge() if token else None
     if token and bridge:
-        args.prompt, _extra_neg = apply_design_token_to_prompt(args.prompt, token, bridge)
-        print(f"[design-token] bgTone={token.get('bgTone')}, primaryColor={token.get('primaryColor')} → 提示词已注入封面风格", file=sys.stderr)
+        # 修1：拿到独立的 negative，按 provider 分流（dashscope/ark 走原生 negative_prompt；
+        #      gemini/openai 由各自函数以否定句式并入正向 prompt），不再丢弃
+        args.prompt, args.negative = apply_design_token_to_prompt(args.prompt, token, bridge)
+        msg = (
+            f"[design-token] bgTone={token.get('bgTone')}, "
+            f"primaryColor={token.get('primaryColor')} → 提示词已注入封面风格"
+        )
+        if args.negative:
+            msg += f"；负向提示词={args.negative}"
+        print(msg, file=sys.stderr)
 
     fn = DISPATCH.get(args.provider.lower())
     if not fn:
