@@ -46,12 +46,12 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          PREFIX="xiaohongshu-skills-${TAG}"
+          PREFIX="xhs-saas-content-${TAG}"
           tar czf "${PREFIX}.tar.gz" \
             --transform "s,^,${PREFIX}/," \
-            skills/ scripts/ SKILL.md pyproject.toml uv.lock LICENSE README.md
+            scripts/ styles/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md
           zip -r "${PREFIX}.zip" \
-            skills/ scripts/ SKILL.md pyproject.toml uv.lock LICENSE README.md \
+            scripts/ styles/ examples/ docs/ SKILL.md CLAUDE.md pyproject.toml LICENSE README.md \
             -x '*.pyc' '__pycache__/*'
 
       - name: Create GitHub Release
@@ -60,7 +60,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          PREFIX="xiaohongshu-skills-${TAG}"
+          PREFIX="xhs-saas-content-${TAG}"
           gh release create "$TAG" \
             "${PREFIX}.tar.gz" \
             "${PREFIX}.zip" \
