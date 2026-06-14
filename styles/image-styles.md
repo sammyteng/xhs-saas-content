@@ -38,8 +38,8 @@
 
 | provider | 模型 | 环境变量 | 安装 | 备注 |
 |---|---|---|---|---|
-| `gemini`（默认） | Nano Banana Pro `gemini-3-pro-image`（别名 `pro`）/ `flash` | `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` | `pip install google-genai` | 中文字渲染最准，支持参考图 `--ref` |
-| `openai` | `gpt-image-1.5`（默认）/ `gpt-image-2` | `OPENAI_API_KEY` | `pip install openai` | 加 `--base-url` 可接兼容聚合站 |
+| `openai`（**默认 = image-2**） | `gpt-image-2`（即 image-2，默认）/ `gpt-image-1.5` | `OPENAI_API_KEY` | `pip install openai` | 默认模型；可用环境变量 `OPENAI_IMAGE_MODEL` 覆盖，加 `--base-url` 接兼容聚合站 |
+| `gemini` | Nano Banana Pro `gemini-3-pro-image`（别名 `pro`）/ `flash` | `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` | `pip install google-genai` | **中文字渲染最准**，支持参考图 `--ref`；中文老出错时切这家 |
 | `ark`（豆包·即梦/Seedream） | `doubao-seedream-4-0-250828` | `ARK_API_KEY` | `pip install 'volcengine-python-sdk[ark]'` | 别名 `jimeng`/`doubao` |
 | `dashscope`（通义万相） | `wan2.2-t2i-plus`（默认） | `DASHSCOPE_API_KEY` | `pip install dashscope` | 别名 `wanx`；wan2.5+ 走新接口，本脚本选 2.2 系列 |
 
@@ -128,6 +128,23 @@ no random watermark text, no watermark, no logo, no signature.
 截图命令：`python3 scripts/shot.py --html card.html --out img_quote.png --selector "#card" --w 1080 --h 1350`
 
 > 拿不准就优先用风格3（HTML）——可控、零错字、最不像 AI 图。
+
+### HTML 卡片风格库（6 款预设 · 配色直接填进上方骨架的 `{bg}`/`{accent}`）
+
+> 来源：本地 `huashu-design` 的「无生图也能还原」风格库蒸馏，每款标了纯 HTML/CSS 还原度。
+> 用法：首轮选「图片风格 = HTML 卡片」时挑一款（或按产品品类自动选）；封面有 design token 时仍优先用 token 配色。**别三款都落在「米白+留白+一个点缀色」**——那是最常见的千篇一律。
+
+| 预设 | 配色（bg / 文字 / accent） | 字体倾向 | 适合品类 | 还原 |
+|---|---|---|---|---|
+| **克制蓝 B2B**（默认稳妥） | `#f7f6f2` / `#1a1a1a` / `#2f6df6` | Inter / 思源黑 | SaaS·财税·B2B 工具 | 98% |
+| **暖色出版** | `#faf6ef` / `#2b2b2b` / `#c0552d` | 衬线标题 + 无衬线正文 | 生活·美妆·居家·食品 | 97% |
+| **Swiss 黑白** | `#ffffff` / `#0a0a0a` / `#0a0a0a` | Geist/Helvetica 锐利直角 | 高端·极简·设计工具 | 98% |
+| **暗色双色** | `#14141a` / `#f0f0f0` / 单荧光 `#00e676` | 等宽字 + 1px 细线 | 科技·开发者·酷感 | 96% |
+| **撞色粗野** | `#fde047` / `#111111` / `#ff2d55` | 粗黑无衬线 + 3-4px 实色描边 | 年轻·潮玩·吸睛·快讯 | 95% |
+| **黑白大字报** | `#ffffff` 或 `#111111` / 反色 / 单色 | 巨号粗体占半屏 | 观点·金句·锐评 | 88% |
+
+⚠️ **暗色双色**只用**单个** accent + 细线，**不堆霓虹/赛博/发光**（踩负面清单）；**撞色粗野**用实色粗描边卡片，不用阴影发光。
+想「多卖点平铺」→ 用 **Bento 便当格**（模块网格，还原 95%）：把上方骨架的 flex 改成 `display:grid` 多格，每格一个卖点。
 
 ---
 

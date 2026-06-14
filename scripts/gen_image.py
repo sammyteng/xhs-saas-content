@@ -43,7 +43,7 @@ GEMINI_MODELS = {
     "pro": "gemini-3-pro-image",         # Nano Banana Pro，质量最高、中文最准（默认）
     "preview": "gemini-3-pro-image-preview",
 }
-OPENAI_DEFAULT = "gpt-image-1.5"         # 当前默认；可换 gpt-image-2 / gpt-image-1-mini
+OPENAI_DEFAULT = "gpt-image-2"           # image-2 = OpenAI GPT Image 2（默认）；可用环境变量 OPENAI_IMAGE_MODEL 覆盖
 # OpenAI 默认模型支持环境变量覆盖（缺省回退到上面的默认值）
 OPENAI_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", OPENAI_DEFAULT)
 ARK_DEFAULT = "doubao-seedream-4-0-250828"   # Seedream 4.0（支持 4K、多图参考）
@@ -367,8 +367,8 @@ DISPATCH = {
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--provider", default="gemini",
-                    help="gemini | openai | ark(豆包/即梦) | dashscope(通义万相)")
+    ap.add_argument("--provider", default="openai",
+                    help="默认 openai（image-2 = gpt-image-2）| gemini(中文最准) | ark(豆包/即梦) | dashscope(通义万相)")
     ap.add_argument("--prompt", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--model", default=None, help="模型名/别名，留空用该 provider 默认")

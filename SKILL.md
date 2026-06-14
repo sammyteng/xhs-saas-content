@@ -61,7 +61,7 @@ description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（J
     - `ark`（豆包·即梦/Seedream）：`ARK_API_KEY`
     - `dashscope`（通义万相）：`DASHSCOPE_API_KEY`
 - 默认值：文章风格按内容类型推荐并让用户 N 选 1；**标题产出 3 个候选（各≤20 字符）**；**配图按内容定 1-9 张**（不固定）；输出目录默认 `./xhs-output`。
-- **偏好记忆**：首次选定的 文案/图片风格 + 生图参数 + 品牌名称 会存进 profile（`scripts/profile.py`），之后**自动复用、不再重复询问**；想改随时说「调整风格」或「修改品牌名」。
+- **偏好记忆（首轮一次配齐）**：首次运行一轮问齐 **品牌名 + 内容风格 + 图片风格 + 生图模型（默认 image-2 = OpenAI gpt-image-2）**，存进 profile（`scripts/profile.py`），之后**自动复用**。再次运行只问一句「沿用还是改风格」；想改随时说「改内容风格 / 改图片风格 / 改品牌 / 换生图模型」。
 - **防同质化**：profile 只锁**品牌层**(作者/IP/语气/品牌名)；**创意层**(角度/风格/结构/钩子/配图/标题)由 `scripts/diversity.py` 每篇轮换并查重，多篇不撞。可 `profile.py set --rotate false` 关轮换、`--style-pool A,B,F` 限定风格池。撞车松紧可调：`--clash-dims N`(默认3)、`--window N`(默认6)，也可 `diversity.py check --clash-dims/--window` 临时覆盖、`diversity.py config` 看当前生效值。
 - **封面联动**：本 Skill 在生成封面时会把封面使用的配色与设计参数输出为 `design-token.json`，内容配图自动加载该 Token 并通过 `cover-bridge.json` 映射适配内容图的色彩与氛围风格，确保封面与内页风格完美统一。
 
@@ -69,11 +69,16 @@ description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（J
 
 ```
 STEP 0   复述：把「目标定义」和「验收清单」打印到 stdout，确认听懂了再动手。
-STEP 0a  读偏好与品牌：python3 scripts/profile.py show
-          - 已存且未调整偏好 → 读取 `brand_name`、`product_brief`（产品简介）、封面风格、文章风格、图片风格、生图参数。
-          - 首次运行或用户请求修改：
-             1. 询问并保存用户偏好的品牌名称 `brand_name`。
-             2. 运行 `python3 scripts/profile.py set --brand "品牌名" --provider ... ` 保存基本配置。
+STEP 0a  ★读偏好 / 首轮一次配齐★：python3 scripts/profile.py show
+          - **首次运行（profile 空）→ 一轮问齐这 4 项并保存**（之后自动复用，不再每次问）：
+             1. **品牌名** `brand_name`（图上显示的品牌/Logo 文字）。
+             2. **内容风格**：按内容类型从 `article-styles.json` 的 8 种（A-H）推荐后让用户选 1。
+             3. **图片风格**：照片写实 / 信息图 / HTML 卡片 三选 1；选 HTML 卡片可再挑一款预设（见 `image-styles.md`「HTML 卡片风格库」）。
+             4. **生图模型**：默认 **image-2（OpenAI `gpt-image-2`，provider=openai）**；也可改 `gemini`(中文最准) / `ark`·即梦 / `dashscope`。没 key 或生图失败会自动退 HTML 卡片。
+             一次性保存：`python3 scripts/profile.py set --brand "品牌名" --article-style X --image-style "HTML卡片" --provider openai --model gpt-image-2 [--product-brief "..."]`
+          - **已配置 → 读取后只问一句**：「本篇沿用上次风格（内容风格 X / 图片风格 Y / 生图 image-2），还是改一下？」
+             - 沿用 → 直接用；要改 → 重选对应项并 `profile.py set` 存回。
+             - 用户随时说「改内容风格 / 改图片风格 / 改品牌 / 换生图模型」也走这里。
 STEP 0b  ★选内容来源（3 选 1，决定本篇选题/素材从哪来）★：
           - **模式 1 · 知识库提取**：用户给一个资料来源——一个文件夹 / 若干文件（.md/.txt/.pdf/.docx 等）/ 一段粘贴文本。
             Agent 读取并消化这些材料，从中提炼【候选选题 + 产品卖点素材】。**不绑定任何特定知识库，给路径/文本即可，通用**。
@@ -90,8 +95,8 @@ STEP 0c  产品卖点提炼 (JTBD)：基于 STEP 0b 得到的原料，参考 `st
           2. 完成 JTBD 提炼，输出一句话定位、3-5 个人话卖点、人群画像与竞品差异。
           3. 结果存入 content.json 的 `product_analysis` 字段（不单独生成 md 文件）。
           4. 推荐符合内容特征的 1-2 个封面风格 ID 与文章风格。
-STEP 0d  防同质化与定风格：
-          - 结合推荐与 profile，由用户选定本次封面风格与文章风格。
+STEP 0d  防同质化（创意维度轮换；内容/图片风格已在 STEP 0a 定好）：
+          - 封面风格 ID 结合 STEP 0c 推荐选定（封面风格 ≠ 内容/图片风格，是 xhs-cover-skill 的 22 种之一）。
           - 运行 `python3 scripts/diversity.py pick` 确定本篇的创意矩阵维度（角度/结构/钩子等）。
           - 运行 `python3 scripts/diversity.py check` 确保创意与最近 6 篇无 ≥3 维撞车。
 STEP 1   ★先写文案（图要照着文案做，必须先定内容）★：基于 JTBD 提炼结果和防同质化矩阵，写出 **3 个候选标题（各≤20字符）** + 长文 + 标签。
