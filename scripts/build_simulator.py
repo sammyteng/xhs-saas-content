@@ -154,6 +154,11 @@ HTML = r"""<!DOCTYPE html>
   .stat{width:100%;font-size:12.5px;color:#0071e3;}
   .hint{font-size:11.5px;color:#8a8a93;}
   .needserv{font-size:11px;color:#8a8a93;line-height:1.5;}
+  /* 无配图模式：图位展示「配图建议」占位（深底浅字，贴合 .media 暗背景） */
+  .ph{padding:44px 36px;overflow-y:auto;max-height:100%;color:#e8e8ef;}
+  .pht{font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;line-height:1.5;}
+  .phi{font-size:13.5px;color:#c9c9d4;line-height:1.7;padding:11px 14px;margin-bottom:10px;background:#16161c;border-radius:10px;border-left:3px solid #3a3a44;}
+  .phi b{color:#fff;}
 </style>
 </head>
 <body>
@@ -279,6 +284,7 @@ function renderRail(){
   });
 }
 function set(i){
+  if(!$('bigimg')) return;   // 无配图模式下图位已被「配图建议」占位替换
   const n=(DATA.images||[]).length||1; cur=((i%n)+n)%n;
   const name=(DATA.images||[])[cur];
   if(name) $('bigimg').src=bust(name);
@@ -288,6 +294,19 @@ function set(i){
   $('promptbox').value=(DATA.image_prompts||[])[cur]||'';
 }
 function go(d){ set(cur+d); }
+
+/* ---- 无配图模式：把 image_prompts 当「配图建议」展示在图位 ---- */
+function renderPlaceholder(){
+  const ps = DATA.image_prompts || [];
+  const sb = document.querySelector('.stagebox');
+  sb.innerHTML = '<div class="ph"><div class="pht">配图建议（本篇未生成图，按下方提示自行配图即可）</div>'
+    + (ps.length
+        ? ps.map((p,i)=>'<div class="phi"><b>图 '+(i+1)+'</b>　'+esc(p||'（待补提示词）')+'</div>').join('')
+        : '<div class="phi">content.json 未提供 image_prompts；可在正文里规划要配几张图。</div>')
+    + '</div>';
+  const rail=$('rail'); if(rail) rail.style.display='none';
+  const it=$('imgtools'); if(it) it.style.display='none';
+}
 
 /* ---- 单图重生成 / 上传 ---- */
 const NEED_SERVER_MSG =
@@ -364,7 +383,9 @@ function init(){
   // 选中默认标题：优先用 content 里记录的 titleIndex，否则第一条
   const startIdx = (Number.isInteger(DATA.titleIndex) && DATA.titleIndex>=0
                     && DATA.titleIndex < (DATA.titles||[]).length) ? DATA.titleIndex : 0;
-  renderHead(); renderTitles(); setTitle(startIdx); renderBody(); renderRail(); set(0);
+  renderHead(); renderTitles(); setTitle(startIdx); renderBody();
+  const noImg = (DATA.images||[]).length === 0;
+  if(noImg){ renderPlaceholder(); } else { renderRail(); set(0); }
   if(SHARE){
     // 分享版：左右结构 + 只读（隐藏所有「只给编辑者看」的部件）
     $('imgtools').style.display='none';      // 改图/换图/提示词工具

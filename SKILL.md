@@ -1,45 +1,51 @@
 ---
 name: xhs-saas-content
-description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（JTBD）、爆款封面生成、内容正文创作、内页配图设计，到只读发布模拟器（单文件分享版）。含内容合规检测（P0 红线拦截 + P1 风险拦截）。
+description: 通用小红书内容生成器：从内容来源（知识库/直接给/历史出题）→ JTBD 卖点提炼 → 文案创作（3 候选标题+正文+标签）→ 内容合规检测 → 只读发布模拟器。**默认只产文案 + 配图建议，不依赖任何生图 key；配图为可选**。
 ---
 
-# xhs-saas-content · 一站式小红书 SaaS 内容生成器
+# xhs-saas-content · 通用小红书内容生成器
 
-把一个软件/SaaS/AI 工具的原始卖点，经过 JTBD 框架提炼、封面图与多图排版设计，做成一篇**能直接发小红书**的完整图文：一键生成卖点分析 + 爆款封面 + 1-9 张去 AI 味的配图 + 第一人称长文 + 一个左图右文、图内嵌单文件的只读「发布模拟器」。
+把一个软件/SaaS/AI 工具的原始卖点，经过 JTBD 框架提炼，做成一篇**能直接发小红书**的内容草稿：卖点分析 + 去 AI 味第一人称长文（3 候选标题+标签）+ 配图建议 + 内容合规检测 + 一个只读「发布模拟器」预览。
+
+> ⚙️ **通用版默认不自动生成图片**：生图依赖 API key / 封面 skill，因环境而异，发布给所有人用的版本不强依赖它。默认产出 **文案 + 「该配什么图」的建议**，模拟器图位自动显示配图建议占位。**真要自动配图，见文末「附 · （可选）配图」**。
 
 ## 1. 目标定义（终态）
 
-运行结束时，产出目录里**已经具备**一篇包含封面和内页的完整小红书内容包：
-- **1 张爆款封面图**（`cover.png` 或 `cover.jpg`），符合小红书 3:4 比例，仅包含用户大标题、副标题与偏好品牌名（无系统风格角标，人物长相一致，但面部表情合理调整）。
+运行结束时，产出目录里**已经具备**一份可直接发小红书的内容草稿（**默认不含图，含配图建议**）：
 - 一份去过 AI 味、贴合所选风格的正文（**3 个候选标题**[各≤20字符] + 长文 + 标签）。
-- **1-9 张**视觉语言统一、且**不踩「一眼 AI」雷区**的配图（数量按内容定，不固定，使用 cover 的 `designToken` 映射实现色调和氛围一致）。
-- 一份 `content.json`（含 titles/body/tags/images/image_prompts/designToken/compliance 等）。
-- 一个 `小红书模拟器.html`：**左图右文结构、图片全部 base64 内嵌成单文件、只读预览**，发给别人不丢图（这是唯一交付的预览文件）。
+- **配图建议**：按正文规划 1-9 条「该配什么图」的 `image_prompts`（默认只给建议，不生成图）。
+- 一份 `content.json`（含 titles/body/tags/image_prompts/product_analysis/compliance；`images` 默认为空数组 `[]`）。
+- 一个 `小红书模拟器.html`：**左图右文、单文件、只读预览**；无图时图位自动展示「配图建议」占位，正文/标题/标签照常预览。
 
-**交付物 = `content.json` + 模拟器（单文件只读分享版）+ 封面图 + 内容配图**。不额外生成中间分析文档（JTBD 分析结果直接写入 `content.json` 的 `product_analysis` 字段）。
+**交付物 = `content.json` + 模拟器（单文件只读）**。不额外生成中间分析文档（JTBD 结果写入 `content.json` 的 `product_analysis`）。
 
-**发布确认**：建议在发布前由用户确认内容，但自动化场景可跳过确认直接交付。本 skill 只生成内容，**不自动发布**到小红书。
+> **配图是可选的**：默认不生成。若运行环境有生图能力（封面 skill / API key），可按文末「附 · （可选）配图」补封面与内页图，模拟器会自动从占位切换成真图。
+
+**发布确认**：建议发布前由用户确认内容，自动化场景可跳过。本 skill 只生成内容，**不自动发布**到小红书。
 
 ## 2. 验收清单（全满足才算完成）
 
-- [ ] `cover.png`（或 `cover.jpg`）封面图存在，画面不带任何系统风格小字、分类名、栏目标签等，仅有用户大标题、副标题与配置的品牌名/Logo；人物如果存在，五官长相与输入人物照保持一致，表情允许调整。
-- [ ] `content.json` 存在，含 **titles（3 个，各≤20 字符）** / body / tags / images / image_prompts / product_analysis / compliance（`ai_disclosure` 默认可留空），正文非空。
+**A. 必做（核心交付，默认全满足才算完成）**
+
+- [ ] `content.json` 存在，含 **titles（3 个，各≤20 字符）** / body / tags / image_prompts（配图建议）/ product_analysis / compliance（`ai_disclosure` 默认可留空）；`images` 默认为 `[]`；正文非空。
 - [ ] 正文已过 `styles/writing-deai.md` 自检：排比≤1、金句≤1、破折号≤1、有真人语气与不确定表达。
-- [ ] 正文字数落在所选风格的 `word_count` 区间内（不超 1000 字）；标签 6-10 个、符合 `article-styles.json` 的 `tag_strategy`（大词+场景词+长尾词+品牌词，全部贴合正文）。
-- [ ] **内容合规检测已通过**：P0（9 类红线）与 P1（8 类风险）均零命中，结果记录在 `content.json` 的 `compliance` 字段。
-- [ ] **（AI 声明默认关闭 🔕）**：当前**不要求**带 `ai_disclosure` / 正文 AI 声明 / 平台勾选。⚠️ 不带有被限流/强制补标风险；想开启见 `styles/content-compliance.md` 的 P0-1 条。
-- [ ] **无虚假体验**：第一人称未假装亲历/未编造身份战绩与效果数据（除非确有真实体验且数据可追溯），否则按 P0-2 改为客观口径。
-- [ ] 内容配图数量 **1-9 张**，视觉语言统一且与封面色调、氛围一致（通过 `cover-bridge.json` 映射）；**逐张过 `image-styles.md` 的「负面清单」**，无霓虹/赛博/悬浮芯片/发光3D字等「一眼 AI」元素。
-- [ ] **人/手核验**：凡出现人或手，逐图核对手指数量与皮肤/牙齿/眼睛质感，命中（畸形手指/塑料皮肤等）即改提示词重出。
-- [ ] **文字区域核验**：放大检查画面所有文字区域，背景招牌/界面/图标上出现伪英文伪汉字或乱码即改提示词重出（或退回风格 3 HTML 渲染）。
-- [ ] **水印/角标核验**：逐图检查四角有无厂商水印/角标（尤其即梦/通义出图），命中则裁剪或换 provider 重出。
-- [ ] **图上文字合规复检（STEP 5a）已通过**：配图内嵌文字无违禁词/极限词（P0-6）、无虚假数据（P0-2）、无模糊功效（P1-2），结果记入 `compliance` 且 `location=image_text`。
-- [ ] `小红书模拟器.html` 能打开：**左图右文**，含封面图及内容配图、轮播正常、显示选中标题/正文/标签；是单文件、图片已内嵌（`grep data:image` 命中），断网也能看图；且为**只读**（无改图/编辑控件）。
-- [ ] 产出目录自包含；**不打「AI生成」水印**。
-- [ ] 偏好已落盘：首次运行写了 profile，保存了 `brand_name`，二次运行 `profile.py show` 能读到并复用，未重复询问风格与品牌名。
+- [ ] 正文字数落在所选风格的 `word_count` 区间内（不超 1000 字）；标签 6-10 个、符合 `article-styles.json` 的 `tag_strategy`。
+- [ ] **内容合规检测已通过**：P0（9 类红线）与 P1（8 类风险）均零命中，结果记入 `content.json` 的 `compliance`。
+- [ ] **无虚假体验**（P0-2）：第一人称未假装亲历、未编造身份战绩与效果数据（除非确有真实体验且可追溯）。
+- [ ] **（AI 声明默认关闭 🔕）**：当前不要求带 `ai_disclosure`；想开启见 `styles/content-compliance.md` P0-1。
+- [ ] **配图建议**：`image_prompts` 按正文规划了 1-9 条「该配什么图」（默认只给建议、不生成图）。
+- [ ] `小红书模拟器.html` 能打开：**左图右文、单文件、只读**；无图时图位展示「配图建议」占位，标题/正文/标签预览正常。
+- [ ] 偏好已落盘：首次写了 profile（品牌 + 内容风格），二次运行能复用、未重复询问。
 - [ ] 防同质化：本篇创意维度经 `diversity.py check` 与最近 6 篇无 ≥3 维撞车，且已 `record` 记账。
 
-未全部勾掉前，不得向用户报「完成」。
+**B. 仅当启用「附 · （可选）配图」时才需满足（默认跳过）**
+
+- [ ] 封面/配图已生成、`images` 已填且数量 1-9；逐张过 `image-styles.md` 负面清单（无霓虹/赛博/发光3D字）。
+- [ ] 人/手核验、文字区域核验、四角厂商水印核验（见 image-styles.md 自检清单）均通过。
+- [ ] 图上文字合规复检通过（P0-6 违禁词 / P0-2 虚假数据 / P1-2 模糊功效），记入 `compliance` 且 `location=image_text`。
+- [ ] 模拟器图位显示真图（非占位），单文件已内嵌（`grep data:image` 命中），断网也能看图。
+
+未勾掉「A. 必做」全部前，不得向用户报「完成」。
 
 ## 3. 输入契约
 
@@ -70,15 +76,13 @@ description: 一站式小红书 SaaS 内容生成器：从产品卖点分析（J
 ```
 STEP 0   复述：把「目标定义」和「验收清单」打印到 stdout，确认听懂了再动手。
 STEP 0a  ★读偏好 / 首轮一次配齐★：python3 scripts/profile.py show
-          - **首次运行（profile 空）→ 一轮问齐这 4 项并保存**（之后自动复用，不再每次问）：
-             1. **品牌名** `brand_name`（图上显示的品牌/Logo 文字）。
+          - **首次运行（profile 空）→ 一轮问齐这 2 项并保存**（之后自动复用，不再每次问）：
+             1. **品牌名** `brand_name`（图上/标签里显示的品牌；纯文案场景用作标签品牌词）。
              2. **内容风格**：按内容类型从 `article-styles.json` 的 8 种（A-H）推荐后让用户选 1。
-             3. **图片风格**：照片写实 / 信息图 / HTML 卡片 三选 1；选 HTML 卡片可再挑一款预设（见 `image-styles.md`「HTML 卡片风格库」）。
-             4. **生图模型**：默认 **image-2（OpenAI `gpt-image-2`，provider=openai）**；也可改 `gemini`(中文最准) / `ark`·即梦 / `dashscope`。没 key 或生图失败会自动退 HTML 卡片。
-             一次性保存：`python3 scripts/profile.py set --brand "品牌名" --article-style X --image-style "HTML卡片" --provider openai --model gpt-image-2 [--product-brief "..."]`
-          - **已配置 → 读取后只问一句**：「本篇沿用上次风格（内容风格 X / 图片风格 Y / 生图 image-2），还是改一下？」
-             - 沿用 → 直接用；要改 → 重选对应项并 `profile.py set` 存回。
-             - 用户随时说「改内容风格 / 改图片风格 / 改品牌 / 换生图模型」也走这里。
+             保存：`python3 scripts/profile.py set --brand "品牌名" --article-style X [--product-brief "..."]`
+          - **（可选·仅当你要真配图时再配）图片风格 + 生图模型**：图片风格（照片写实/信息图/HTML 卡片，HTML 卡片见 `image-styles.md` 风格库）+ 生图模型（默认 image-2=OpenAI gpt-image-2，也可 gemini/ark/dashscope）。
+             `python3 scripts/profile.py set --image-style "HTML卡片" --provider openai --model gpt-image-2`
+          - **已配置 → 读取后只问一句**：「本篇沿用上次（内容风格 X），还是改一下？」沿用→直接用；要改→重选并 `profile.py set` 存回。用户随时说「改内容风格 / 改品牌 / 我要配图」都走这里。
 STEP 0b  ★选内容来源（3 选 1，决定本篇选题/素材从哪来）★：
           - **模式 1 · 知识库提取**：用户给一个资料来源——一个文件夹 / 若干文件（.md/.txt/.pdf/.docx 等）/ 一段粘贴文本。
             Agent 读取并消化这些材料，从中提炼【候选选题 + 产品卖点素材】。**不绑定任何特定知识库，给路径/文本即可，通用**。
@@ -94,9 +98,8 @@ STEP 0c  产品卖点提炼 (JTBD)：基于 STEP 0b 得到的原料，参考 `st
           1. 转化"产品语言"为"用户人话语言"。
           2. 完成 JTBD 提炼，输出一句话定位、3-5 个人话卖点、人群画像与竞品差异。
           3. 结果存入 content.json 的 `product_analysis` 字段（不单独生成 md 文件）。
-          4. 推荐符合内容特征的 1-2 个封面风格 ID 与文章风格。
-STEP 0d  防同质化（创意维度轮换；内容/图片风格已在 STEP 0a 定好）：
-          - 封面风格 ID 结合 STEP 0c 推荐选定（封面风格 ≠ 内容/图片风格，是 xhs-cover-skill 的 22 种之一）。
+          4. （可选）若本篇要配图，顺带推荐 1-2 个封面风格方向。
+STEP 0d  防同质化（创意维度轮换；内容风格已在 STEP 0a 定好）：
           - 运行 `python3 scripts/diversity.py pick` 确定本篇的创意矩阵维度（角度/结构/钩子等）。
           - 运行 `python3 scripts/diversity.py check` 确保创意与最近 6 篇无 ≥3 维撞车。
 STEP 1   ★先写文案（图要照着文案做，必须先定内容）★：基于 JTBD 提炼结果和防同质化矩阵，写出 **3 个候选标题（各≤20字符）** + 长文 + 标签。
@@ -114,41 +117,21 @@ STEP 2a  ★内容合规检测（文本层）★：按 `styles/content-complianc
             { "ai_disclosure": "...", "p0_passed": true/false, "p0_issues": [...], "p1_passed": true/false, "p1_issues": [...], "checked_at": "ISO时间" }
             issues 元素：{ "rule": "P0-2", "text": "命中原文", "location": "title|body|tags|image_text", "fix": "建议改法" }（与 content-compliance.md 保持一致）。
           - P0 或 P1 未通过 → 回 STEP 1 重写相关部分，再重新检测，直到全部通过。
-STEP 3   ★生成封面（此时标题已定，封面照着定好的标题做）★（优先级递降）：
-          - 从 STEP 1 选定的标题里取大标题，并据正文拟一句副标题，作为封面文字。
-          ① LLM 生图 + 人物形象（最优）：如用户提供了 cover-image（人物照），优先用 LLM 生图能力
-            （Agent 自带或 API）按风格模板 prompt + 人物参考照生成带人物的封面。
-          ② LLM 生图（次优）：无人物照时，仍用 LLM 生图能力按风格 prompt 直接生成纯设计封面。
-          ③ HTML 渲染兜底（最后）：LLM 生图不可用或连续失败时，退回 HTML 模板 + playwright 截图。
-          - 调用封面 skill 脚本生成封面：
-            `node ../xhs-cover-skill/scripts/generate.mjs --title "已定大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" --image "人物照路径" --output-dir "输出目录" --aspect-ratio "3:4"`
-          - 封面生成脚本运行后会在输出目录产出 `cover.png` 和 `design-token.json`。
-          - 检查封面图：确保不带多余的系统标签小字；人物面部五官身份未改变，仅表情合理匹配。
-STEP 4   设计内页配图提示词（照着正文做，与封面同一视觉）：
-          - 自动加载 STEP 3 导出的 `design-token.json`，通过 `styles/cover-bridge.json` 映射内容配图的设计规范（色彩、氛围等）。
-          - 根据正文逻辑规划 1-9 张内容配图，按照 `styles/image-styles.md` 生成包含 `designToken` 的提示词。
-          - **务必对照「避免一眼 AI」负面清单**进行初步自检。
-STEP 5   生成内容配图（优先级同封面）：
-          ① LLM 生图（Agent 自带或 API）：优先用 LLM 按提示词直接生成配图。
-          ② HTML 渲染兜底：LLM 不可用时，写 HTML → python3 scripts/shot.py 截图。
-          - 生成后再次对照负面清单（无发光3D字、悬浮芯片等）自检。
-STEP 5a  ★图上文字合规复检★：封面（STEP 3）与配图（STEP 5）上印的标题/金句/数据/卖点文字此时才真正存在，必须复检：
-          - 抽出每张图内嵌的文字（封面与各内容配图的标题/金句/数据/卖点等可读文字）。
-          - 复用 `styles/content-compliance.md` 的 **P0-6（违禁词/极限词）** / **P0-2（虚假数据）** / **P1-2（模糊功效）** 规则，对抽出的图上文字再扫一遍。
-          - 命中任一 → 改写该图的提示词后重出该图（HTML 渲染兜底则改 HTML 文案重渲），再次抽字复检，直到全部通过。
-          - 把复检结果并入 content.json 的 `compliance` 字段：命中项追加为 issues 元素，`location` 用 `image_text`（与文本层 P0/P1 共用同一 issues 列表与 p0_passed/p1_passed 口径）。
-STEP 6   写 content.json：整理所有标题、正文、标签、配图路径（含 `cover.png` 及内容配图）、提示词、JTBD 分析、`source_mode`、合规检测结果（`compliance`；`ai_disclosure` 默认留空——P0-1 当前关闭）。
-STEP 7   构建小红书模拟器（只产出一个：左图右文、图内嵌、只读的分享版）：
+STEP 3   规划配图建议（默认不生成图）：根据正文逻辑规划 1-9 条「该配什么图」，写成 `image_prompts`（每条说清画面/数据/金句，第 1 条作封面：大标题+副标题）。
+          - 这些是给用户/设计师的**建议**；`images` 留空 `[]`，**默认不调用任何生图**。
+          - **真要自动生成图** → 见文末「附 · （可选）配图」（需生图能力/封面 skill；生成后回填 `images` 并补做图上文字合规复检）。
+STEP 4   写 content.json：整理标题、正文、标签、`image_prompts`（配图建议）、JTBD 分析、`source_mode`、合规结果（`compliance`；`ai_disclosure` 默认留空——P0-1 当前关闭）。`images` 默认 `[]`（仅启用可选配图时回填真实路径）。
+STEP 5   构建小红书模拟器（左图右文、单文件、只读）：
           - 运行 `python3 scripts/build_simulator.py --content content.json --out 小红书模拟器.html --embed`
-          - 这是**唯一交付**的预览文件（单文件、图片 base64 内嵌、发给别人不丢图、只读）；不再单独产出可编辑版。
-STEP 8   ★自检循环★：
-          - 逐一勾选「验收清单」，如有任何不符合，返回对应的 STEP 重新生成或修正。
+          - **无图时图位自动显示「配图建议」占位**，文案照常预览；有图时显示真图。这是唯一交付的预览文件。
+STEP 6   ★自检循环★：
+          - 逐一勾选「验收清单 A. 必做」，如有不符合返回对应 STEP 修正（启用了可选配图再核 B 项）。
           - 全部通过后，运行 `python3 scripts/diversity.py record` 记账，输出交付摘要，以退出码 0 正常结束。
-          - 交付物：content.json + 模拟器（单文件只读分享版）+ 图片文件。不额外生成其他文件。
+          - 交付物：content.json + 模拟器（单文件只读）。不额外生成其他文件。
           - 不发送飞书/钉钉/邮件等渠道通知，仅在 stdout 输出交付摘要。
 ```
 
-**自循环要点**：先定文案再生图（图照文案做，别反）；图少了就补、多了就删（1-9 自由）；有错字回 STEP1；图踩 AI 味雷区就改提示词重出；分享版忘了 `--embed` 会丢图，重生成。改完一定重新走 STEP8 自检，别跳。
+**自循环要点**：默认只产「文案 + 配图建议」，不生成图；正文有错字/超字数回 STEP 1 重写；合规没过回 STEP 1 改再重测；模拟器忘了 `--embed` 会丢图，重生成。改完一定重新走 STEP 6 自检，别跳。（启用可选配图时：先定文案再生图，图照文案做，并补做图上文字合规复检。）
 
 ## 5. 内容合规检测规范
 
@@ -210,7 +193,7 @@ STEP 8   ★自检循环★：
 - `styles/product-discovery.md` — 产品卖点提炼与 JTBD 转化方法论
 - `styles/content-compliance.md` — 小红书内容合规检测规范（P0 红线 + P1 风险）
 - `styles/article-styles.json` — 8 种文章风格（A-H，各带 `word_count` 字数区间）+ 内容类型→风格推荐表 + `tag_strategy` 标签生成规范
-- `styles/image-styles.md` — 3 种图片风格 + 提示词模板 + 配图清单
+- `styles/image-styles.md` —（可选配图用）3 种图片风格 + HTML 卡片风格库 6 款 + 负面清单
 - `styles/writing-deai.md` — 去 AI 味改写清单与自检
 - `styles/angle-matrix.md` — 选题角度矩阵 + 钩子/结构/标题轮换池（防同质化）
 - `styles/cover-bridge.json` — 封面 designToken → 内容图视觉适配映射表（bgTone/fontVibe 映射）
@@ -221,3 +204,26 @@ STEP 8   ★自检循环★：
 - `scripts/profile.py` — 风格/生图偏好记忆（show/set/reset），二次运行自动复用
 - `scripts/diversity.py` — 反同质化引擎（pick/check/record + 历史账本），多篇轮换不撞
 - `examples/content.sample.json` — 示例（含 3 候选标题 + image_prompts，虚构产品，可直接套改）
+
+---
+
+## 附 · （可选）配图：要自动出图时才看
+
+> 默认**不配图**——发布给所有人的通用版不强依赖生图能力。只有当你的运行环境有生图能力时才按本节补图：补完把真实路径回填进 `content.json` 的 `images`，重跑 STEP 5 生成模拟器（图位自动从「配图建议」占位切成真图），并补做下方「图上文字合规复检」+ 验收清单 B 项。
+
+**前置生图能力（任一）**：① Agent 自带生图（Codex/Claude 等）；② API key（默认 image-2 = OpenAI `gpt-image-2`，或 `gemini`/`ark`/`dashscope`）；③ 都没有 → 用 HTML 卡片（playwright，免 key、中文零错字，见 `image-styles.md` 卡片风格库）。
+
+**A · 封面**（照 STEP 1 已定的大标题做）：
+- 优先用封面 skill：`node ../xhs-cover-skill/scripts/generate.mjs --title "大标题" --subtitle "副标题" --brand "品牌名" --style "风格ID" [--image 人物照] --output-dir 输出目录 --aspect-ratio 3:4`
+  - ⚠️ 封面 skill 需**自己的 API 配置**（`XHS_COVER_API_KEY`/`--api-key` + `--base-url` + `--model`），它走 chat/completions 返图，与 image-2 的图片接口不同——按它的 README onboarding 配一次。
+  - 产出「风格名_标题_日期.png」+ `design-token.json`（封面→内页配色联动）；把**实际文件名**回填到 `content.json` 的 `images[0]` 与 `cover`。
+- 没封面 skill 的 API → 用 HTML 卡片当封面（写卡片 HTML → `python3 scripts/shot.py`）。
+
+**B · 内页配图**（照正文做，与封面同视觉）：
+- 加载封面的 `design-token.json`，经 `styles/cover-bridge.json` 映射配色。
+- 按 `image_prompts` 逐张生成：`python3 scripts/gen_image.py --provider openai --model gpt-image-2 --aspect 3:4 --prompt "..." --design-token design-token.json --out imgN.png`（无 key → 换 HTML 卡片 `shot.py`）。
+- **逐张过 `image-styles.md` 负面清单**：无霓虹/赛博/发光3D字、无畸形手指/塑料皮肤、无乱码伪文字、无厂商水印。
+
+**C · 图上文字合规复检**（出图后必做）：抽出每张图内嵌的文字，复用 `content-compliance.md` 的 P0-6（违禁词/极限词）/P0-2（虚假数据）/P1-2（模糊功效）再扫一遍；命中 → 改提示词重出；结果并入 `compliance`，`location` 用 `image_text`。
+
+**D · 回填**：`images` 填真实路径 → 重跑 STEP 5 → 核「验收清单 B 项」。
