@@ -1,5 +1,6 @@
 {
   "_note": "封面风格 → 内容图视觉适配。根据封面 designToken 的 bgTone 映射内容图的配色方案，确保封面+内页视觉统一。",
+  "_consumers": "真实消费方说明：bgTone_mappings 的提示词字段（prompt_color_hint / prompt_style_hint）被 gen_image.py 文生图消费；bgTone_mappings.html_card 与 fontVibe_mappings 被 shot.py 的 HTML 卡片 CSS 消费；mood、image_style_preference 及各 description 字段当前无脚本消费，仅供人读参考。",
   "bgTone_mappings": {
     "dark": {
       "description": "深色封面 → 内容图保持暗调或使用高对比浅底",

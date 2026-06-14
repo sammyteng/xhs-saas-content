@@ -23,9 +23,6 @@ content.json 字段（均可选，缺省有默认值）：
 """
 import os, json, argparse, base64, mimetypes
 
-# ---- cover-bridge.json 路径（相对于本脚本） ----
-BRIDGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "styles", "cover-bridge.json")
-
 def load_design_token(token_path):
     """读取 design-token.json，返回 designToken 字典（或 None）。"""
     if not token_path or not os.path.exists(token_path):
@@ -33,13 +30,6 @@ def load_design_token(token_path):
     with open(token_path, encoding="utf-8") as f:
         data = json.load(f)
     return data.get("designToken", data)
-
-def load_bridge():
-    """加载 cover-bridge.json 映射表。"""
-    if not os.path.exists(BRIDGE_PATH):
-        return None
-    with open(BRIDGE_PATH, encoding="utf-8") as f:
-        return json.load(f)
 
 def norm(content):
     c = dict(content)

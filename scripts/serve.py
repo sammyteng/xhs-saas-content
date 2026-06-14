@@ -59,7 +59,10 @@ def make_handler(outdir, content_name):
                    "--prompt", prompt, "--out", out, "--aspect", d.get("aspect", "9:16")]
             if d.get("model"):
                 cmd += ["--model", d["model"]]
-            r = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            except subprocess.TimeoutExpired:
+                return self._json(504, {"ok": False, "error": "生图超时（超过180秒），请重试或更换 provider"})
             if r.returncode != 0 or not os.path.exists(out):
                 return self._json(500, {"ok": False, "error": (r.stderr or r.stdout or "生图失败").strip()[-300:]})
             self._json(200, {"ok": True, "file": fname})
@@ -87,10 +90,13 @@ def make_handler(outdir, content_name):
             # 自动生成分享版（图片内嵌单文件）
             share_name = "小红书模拟器_分享版.html"
             share_out = os.path.join(outdir, share_name)
-            r = subprocess.run(
-                [sys.executable, os.path.join(SCRIPTS, "build_simulator.py"),
-                 "--content", conf, "--out", share_out, "--embed"],
-                capture_output=True, text=True)
+            try:
+                r = subprocess.run(
+                    [sys.executable, os.path.join(SCRIPTS, "build_simulator.py"),
+                     "--content", conf, "--out", share_out, "--embed"],
+                    capture_output=True, text=True, timeout=180)
+            except subprocess.TimeoutExpired:
+                return self._json(504, {"ok": False, "error": "生成分享版超时（超过180秒），请重试或更换 provider"})
             share = share_name if r.returncode == 0 else None
             self._json(200, {"ok": True, "path": "content.confirmed.json", "share": share})
 

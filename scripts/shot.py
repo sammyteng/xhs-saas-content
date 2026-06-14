@@ -17,7 +17,7 @@
   - 提供 --design-token 时，自动注入封面配色的 CSS 自定义属性到 HTML，
     HTML 模板中用 var(--card-bg) 等即可自动适配。
 """
-import argparse, os, json
+import argparse, os, json, sys
 from playwright.sync_api import sync_playwright
 
 # ---- cover-bridge.json 路径（相对于本脚本） ----
@@ -49,7 +49,16 @@ def build_css_overrides(token, bridge):
     font_vibe = token.get("fontVibe", "")
 
     tone_map = bridge.get("bgTone_mappings", {}).get(bg_tone)
-    font_map = bridge.get("fontVibe_mappings", {}).get(font_vibe)
+    font_vibe_mappings = bridge.get("fontVibe_mappings", {})
+    font_map = font_vibe_mappings.get(font_vibe)
+    # token 提供了 fontVibe，但 bridge 里没有对应档 → 回退 bold-sans 并告警
+    if font_vibe and not font_map:
+        print(
+            f"[design-token] WARN: 未知 fontVibe='{font_vibe}'，"
+            f"已回退到 bold-sans 档",
+            file=sys.stderr,
+        )
+        font_map = font_vibe_mappings.get("bold-sans")
 
     props = []
     if tone_map:
@@ -59,8 +68,26 @@ def build_css_overrides(token, bridge):
         # accent_from / label_color_from 指向 token 中的字段名
         accent_field = card.get("accent_from", "primaryColor")
         label_field = card.get("label_color_from", "primaryColor")
-        props.append(f"  --card-accent: {token.get(accent_field, primary_color)};")
-        props.append(f"  --card-label: {token.get(label_field, primary_color)};")
+        if accent_field in token:
+            accent_value = token[accent_field]
+        else:
+            print(
+                f"[design-token] WARN: 间接寻址字段 accent_from='{accent_field}' "
+                f"不在 token 中，已回退到 primaryColor",
+                file=sys.stderr,
+            )
+            accent_value = primary_color
+        if label_field in token:
+            label_value = token[label_field]
+        else:
+            print(
+                f"[design-token] WARN: 间接寻址字段 label_color_from='{label_field}' "
+                f"不在 token 中，已回退到 primaryColor",
+                file=sys.stderr,
+            )
+            label_value = primary_color
+        props.append(f"  --card-accent: {accent_value};")
+        props.append(f"  --card-label: {label_value};")
 
     if font_map:
         props.append(f"  --card-font-family: {font_map.get('html_font_family', '')};")
@@ -94,7 +121,6 @@ def main():
     if token and bridge:
         css_override = build_css_overrides(token, bridge)
         if css_override:
-            import sys
             print(f"[design-token] bgTone={token.get('bgTone')}, fontVibe={token.get('fontVibe')} → CSS 自定义属性已注入", file=sys.stderr)
 
     with sync_playwright() as p:
